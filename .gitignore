@@ -1,0 +1,11 @@
+*.dblite
+hardware.asc
+hardware.bin
+hardware.blif
+hardware.rpt
+*.idea
+**/*.iml
+*.bin
+*.asc
+*.rpt
+*.blif
