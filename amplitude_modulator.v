@@ -8,24 +8,26 @@ module amplitude_modulator #(
   input [DATA_BITS-1:0]       din,
   input [AMPLITUDE_BITS-1:0]  amplitude,
   input                       clk,
-  output reg [DATA_BITS-1:0]  dout
+  output wire [DATA_BITS-1:0]  dout
 );
 
   localparam D_SIGNED_BITMASK = (2 ** (DATA_BITS-1));
 
-  reg signed [AMPLITUDE_BITS:0] signed_amp;
-  reg signed [DATA_BITS-1:0] din_signed;
-  reg signed [DATA_BITS-1:0] dout_signed;
-  always @* begin
-    din_signed = din ^ D_SIGNED_BITMASK;
-    signed_amp = { 1'b0, amplitude[AMPLITUDE_BITS-1:0] };
-  end
+  // cajole amplitude into a signed value so that verilog
+  // uses signed arithmetic in the multiply below
+  wire signed [AMPLITUDE_BITS:0] amp_signed;
+  assign amp_signed = { 1'b0, amplitude[AMPLITUDE_BITS-1:0] }; // amplitude with extra MSB (0)
 
-  reg signed [DATA_BITS+AMPLITUDE_BITS-1:0] scaled_din;
+  // convert din to a signed value (toggle MSB)
+  wire signed [DATA_BITS-1:0] din_signed;
+  assign din_signed = din ^ D_SIGNED_BITMASK;  // din_signed = -128..127 instead of 0..255
+
+  reg signed [DATA_BITS+AMPLITUDE_BITS-1:0] scaled_din;  // intermediate value with extended precision
 
   always @(posedge clk) begin
-    scaled_din = (din_signed * signed_amp);
-    dout_signed = scaled_din[DATA_BITS+AMPLITUDE_BITS-1 -: DATA_BITS];
-    dout = dout_signed ^ D_SIGNED_BITMASK;
+    scaled_din = (din_signed * amp_signed);
   end
+
+  assign dout = scaled_din[DATA_BITS+AMPLITUDE_BITS-1 -: DATA_BITS] ^ D_SIGNED_BITMASK;
+
 endmodule

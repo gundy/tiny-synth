@@ -1,7 +1,8 @@
 module voice #(
   parameter OUTPUT_BITS = 12,
   parameter FREQ_BITS = 16,
-  parameter PULSEWIDTH_BITS = 12
+  parameter PULSEWIDTH_BITS = 12,
+  parameter ACCUMULATOR_BITS = 24
 )(
   input [FREQ_BITS-1:0] tone_freq,
   input [3:0] waveform_enable,
@@ -27,7 +28,12 @@ module voice #(
   wire [11:0] tone_generator_data;
   wire[7:0] envelope_amplitude;
 
-  tone_generator tone_generator(
+  tone_generator #(
+    .FREQ_BITS(FREQ_BITS),
+    .PULSEWIDTH_BITS(PULSEWIDTH_BITS),
+    .OUTPUT_BITS(OUTPUT_BITS),
+    .ACCUMULATOR_BITS(ACCUMULATOR_BITS)
+  ) tone_generator (
       .tone_freq(tone_freq),
       .en_noise(waveform_enable[3]),
       .en_pulse(waveform_enable[2]),
@@ -42,7 +48,7 @@ module voice #(
       .en_sync(en_sync),
       .sync_source(sync_source),
       .en_ringmod(en_ringmod),
-      .ringmod_source(ringmod_source),
+      .ringmod_source(ringmod_source)
     );
 
   envelope_generator envelope(

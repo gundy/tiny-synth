@@ -30,16 +30,40 @@ module tone_generator #(
   reg [ACCUMULATOR_BITS:0] accumulator;
 
   wire [OUTPUT_BITS-1:0] noise_dout;
-  tone_generator_noise noise(.clk(accumulator[19]), .rst(rst), .dout(noise_dout));
+  tone_generator_noise #(
+    .OUTPUT_BITS(OUTPUT_BITS)
+  ) noise(.clk(accumulator[19]), .rst(rst), .dout(noise_dout));
 
   wire [OUTPUT_BITS-1:0] triangle_dout;
-  tone_generator_triangle tri(.accumulator(accumulator[ACCUMULATOR_BITS-1:0]), .dout(triangle_dout), .en_ringmod(en_ringmod), .ringmod_source(ringmod_source));
+  tone_generator_triangle #(
+      .ACCUMULATOR_BITS(ACCUMULATOR_BITS),
+      .OUTPUT_BITS(OUTPUT_BITS)
+  ) triangle_generator (
+      .accumulator(accumulator[ACCUMULATOR_BITS-1:0]),
+      .dout(triangle_dout),
+      .en_ringmod(en_ringmod),
+      .ringmod_source(ringmod_source)
+    );
 
   wire [OUTPUT_BITS-1:0] saw_dout;
-  tone_generator_saw saw(.accumulator(accumulator[ACCUMULATOR_BITS-1:0]), .dout(saw_dout));
+  tone_generator_saw  #(
+      .ACCUMULATOR_BITS(ACCUMULATOR_BITS),
+      .OUTPUT_BITS(OUTPUT_BITS)
+    ) saw(
+      .accumulator(accumulator[ACCUMULATOR_BITS-1:0]),
+      .dout(saw_dout)
+    );
 
   wire [OUTPUT_BITS-1:0] pulse_dout;
-  tone_generator_pulse pulse(.accumulator(accumulator[ACCUMULATOR_BITS-1:0]), .dout(pulse_dout), .pulse_width(pulse_width));
+  tone_generator_pulse  #(
+      .ACCUMULATOR_BITS(ACCUMULATOR_BITS),
+      .OUTPUT_BITS(OUTPUT_BITS),
+      .PULSEWIDTH_BITS(PULSEWIDTH_BITS)
+    ) pulse(
+      .accumulator(accumulator[ACCUMULATOR_BITS-1:0]),
+      .dout(pulse_dout),
+      .pulse_width(pulse_width)
+    );
 
   reg [OUTPUT_BITS-1:0] dout_tmp;
 
