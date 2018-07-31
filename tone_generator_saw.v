@@ -1,3 +1,13 @@
+/* =============================
+ * Sawtooth tone generator
+ * =============================
+ *
+ * Generates a sawtooth output waveform.
+ *
+ * Principle of operation:
+ *
+ * Take the upper OUTPUT_BITS from the accumulator.
+ */
 module tone_generator_saw #(
   parameter ACCUMULATOR_BITS = 24,
   parameter OUTPUT_BITS = 12)

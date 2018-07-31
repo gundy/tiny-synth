@@ -1,5 +1,18 @@
-/*
- * Phase-accumulator tone-generator modelled loosely on 6581 SID chip
+/* ================================
+ * Phase-accumulator tone-generator
+ * ================================
+ *
+ * This module aggregates the other tone generators together.
+ *
+ * It houses the accumulator and the logic for incrementing it
+ * at a given frequency.
+ *
+ * It allows individual tone generators to be selected and logically
+ * "ANDed" into the output stream.
+ *
+ * It also has provision for syncing oscillators together based on 
+ * when they overflow, and proving the accumulator MSB for ring
+ * modulation purposes.
  */
 module tone_generator #(
   parameter FREQ_BITS = 16,

@@ -1,6 +1,40 @@
-// generate noise! :)
-// out_data is 12-bit noise that is behaviourally similar to what the 6581
-// SID chip did
+/* ============================
+ * Random noise tone generator
+ * ============================
+ *
+ * This module creates a pseudo-random stream of noise at the rate of clk.
+ *
+ * out_data is 12-bit noise that is behaviourally similar to what the 6581
+ * SID chip would produce.
+ *
+ * By varying the speed of the clk input, the pitch of the generated
+ * noise can be varied.
+ *
+ * Principle of operation:
+ *
+ * The noise output is taken from intermediate bits of a 23-bit shift register
+ *  Operation: Calculate XOR result, shift register, set bit 0 = result.
+ *
+ *                       ----------------------->---------------------
+ *                       |                                            |
+ *                   ----EOR----                                      |
+ *                   |         |                                      |
+ *                   2 2 2 1 1 1 1 1 1 1 1 1 1                        |
+ * Register bits:    2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 <---
+ *                   |   |       |     |   |       |     |   |
+ *  out bits  :      7   6       5     4   3       2     1   0
+ *
+ * The 8-bits extracted from the shift register are then left-aligned
+ *  in the output bits.
+ *
+ * Note: Because of the way this works; if all of the bits in the shift
+ *       register somehow become zero's, the output will stay zero
+ *       permanently (0 XOR 0 => 0).
+ *
+ *       For that reason the shfit register is initially seeded with a
+ *       "random" (key mashed, static) value, and can be reset with the rst
+ *       input if required.
+ */
 module tone_generator_noise #(
   parameter OUTPUT_BITS = 12
 )(
@@ -17,21 +51,7 @@ module tone_generator_noise #(
       end
     else
       begin
-      // The noise output is taken from intermediate bits of a 23-bit shift register
-      // Operation: Calculate EOR result, shift register, set bit 0 = result.
-      //
-      //                        ----------------------->---------------------
-      //                        |                                            |
-      //                   ----EOR----                                       |
-      //                   |         |                                       |
-      //                   2 2 2 1 1 1 1 1 1 1 1 1 1                         |
-      // Register bits:    2 1 0 9 8 7 6 5 4 3 2 1 0 9 8 7 6 5 4 3 2 1 0 <---
-      //                   |   |       |     |   |       |     |   |
-      // OSC3 bits  :      7   6       5     4   3       2     1   0
-      //
-      // Since waveform output is 12 bits the output is left-shifted 4 times.
-
-      lsfr <= { lsfr[21:0], lsfr[22] ^ lsfr[17] };
+        lsfr <= { lsfr[21:0], lsfr[22] ^ lsfr[17] };
     end
   end
 

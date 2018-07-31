@@ -1,3 +1,34 @@
+/* ===================
+ * Envelope generator
+ * ===================
+ *
+ * Creates an 8-bit ADSR (attack, decay, sustain, release) volume envelope.
+ *
+ *        ..
+ *     A . `. D    S
+ *      .    `----------
+ *     .                . R
+ *    .                  `  .
+ *  ---------------------------->
+ *                             t
+ *
+ * By modulating the tone generator output with an ADSR envelope like this,
+ * it's possible to create many interesting sounds.
+ *
+ * The input parameters are described in README.md.
+ *
+ * Principle of operation:
+ *
+ * The envelope generator is a state machine that makes use of an accumulator for
+ * generation of the output wave shape & timing.  For each of the A/D/R stages,
+ * the state is advanced when the accumulator overflows.
+ *
+ * The envelope is 'triggered' by a gate signal, and as long as gate is held
+ * high, the envelope won't transition past the sustain phase.  When gate is
+ * released, the envelope will transition into the release phase.
+ *
+ * The decay and release phases use an exponential fall-off.
+ */
 module envelope_generator #(
   parameter CLK_FREQ = 1000000,
   parameter ACCUMULATOR_BITS = 26

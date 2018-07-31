@@ -1,3 +1,9 @@
+/* ===================
+ * Two-into-one mixer
+ * ===================
+ *
+ * Mixes two input signals into a single output.
+ */
 module two_into_one_mixer #(
   parameter DATA_BITS = 12)
 (
