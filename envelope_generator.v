@@ -104,21 +104,25 @@ module envelope_generator #(
   reg [16:0] reltmp;  /* scratch-register for intermediate-result of release-scaling */
 
   reg [ACCUMULATOR_BITS:0] accumulator;
-  reg [16:0] accumulator_inc;  /* value to add to accumulator */
+  wire [16:0] accumulator_inc;  /* value to add to accumulator */
 
   reg [7:0] exp_out;  // exponential decay mapping of accumulator output; used for decay and release cycles
   eight_bit_exponential_decay_lookup exp_lookup(.din(accumulator[ACCUMULATOR_BITS-1 -: 8]), .dout(exp_out));
 
-  always @(state)
-  begin
-    case(state)
-      3'd0: accumulator_inc <= attack_inc;
-      3'd1: accumulator_inc <= decay_inc;
-      3'd2: accumulator_inc <= 0;
-      3'd3: accumulator_inc <= release_inc;
-      3'd4: accumulator_inc <= 0;
-    endcase
-  end
+  function calculate_acc_inc;
+  input [2:0] s;
+    begin
+      case(s)
+        3'd0: calculate_acc_inc = attack_inc;
+        3'd1: calculate_acc_inc = decay_inc;
+        3'd2: calculate_acc_inc = 0;
+        3'd3: calculate_acc_inc = release_inc;
+        3'd4: calculate_acc_inc = 0;
+      endcase
+    end
+  endfunction
+
+  assign accumulator_inc = calculate_acc_inc(state);
 
   function [2:0] next_state;
     input [2:0] s;
