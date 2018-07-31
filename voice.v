@@ -9,9 +9,12 @@ module voice #(
   input clk,
   input rst,
   output wire [OUTPUT_BITS-1:0] dout,
-  output wire accumulator_msb,  /* used to feed ringmod/sync on another voice */
-  input ringmod_enable,
+  output wire accumulator_msb,   /* used to feed ringmod on another voice */
+  output wire accumulator_overflow,  /* set when accumulator = 0; used to sync with another oscillator */
+  input en_ringmod,
   input wire ringmod_source,
+  input en_sync,
+  input wire sync_source,
 
   // envelope generator params
   input wire gate,
@@ -26,14 +29,20 @@ module voice #(
 
   tone_generator tone_generator(
       .tone_freq(tone_freq),
-      .waveform_enable(waveform_enable),
+      .en_noise(waveform_enable[3]),
+      .en_pulse(waveform_enable[2]),
+      .en_saw(waveform_enable[1]),
+      .en_triangle(waveform_enable[0]),
       .pulse_width(pulse_width),
       .clk(clk),
       .rst(rst),
       .dout(tone_generator_data),
       .accumulator_msb(accumulator_msb),
-      .ringmod_enable(ringmod_enable),
-      .ringmod_source(ringmod_source)
+      .accumulator_overflow(accumulator_overflow),
+      .en_sync(en_sync),
+      .sync_source(sync_source),
+      .en_ringmod(en_ringmod),
+      .ringmod_source(ringmod_source),
     );
 
   envelope_generator envelope(

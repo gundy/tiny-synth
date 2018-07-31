@@ -9,67 +9,65 @@ module tone_generator #(
 )
 (
   input [FREQ_BITS-1:0] tone_freq,
-  input [3:0] waveform_enable,
   input [PULSEWIDTH_BITS-1:0] pulse_width,
   input clk,
   input rst,
   output wire [OUTPUT_BITS-1:0] dout,
   output wire accumulator_msb,
-  input ringmod_enable,
-  input wire ringmod_source
-);
+  output wire accumulator_overflow,
 
-  reg [ACCUMULATOR_BITS-1:0] accumulator;
-  reg [OUTPUT_BITS-1:0] wave_tri_out;
+  input wire en_ringmod,
+  input wire ringmod_source,
+
+  input wire en_sync,
+  input wire sync_source,
+
+  input en_noise,
+  input en_pulse,
+  input en_triangle,
+  input en_saw);
+
+  reg [ACCUMULATOR_BITS:0] accumulator;
 
   wire [OUTPUT_BITS-1:0] noise_dout;
   tone_generator_noise noise(.clk(accumulator[19]), .rst(rst), .dout(noise_dout));
 
-  reg [OUTPUT_BITS-1:0] val;
+  wire [OUTPUT_BITS-1:0] triangle_dout;
+  tone_generator_triangle tri(.accumulator(accumulator[ACCUMULATOR_BITS-1:0]), .dout(triangle_dout), .en_ringmod(en_ringmod), .ringmod_source(ringmod_source));
+
+  wire [OUTPUT_BITS-1:0] saw_dout;
+  tone_generator_saw saw(.accumulator(accumulator[ACCUMULATOR_BITS-1:0]), .dout(saw_dout));
+
+  wire [OUTPUT_BITS-1:0] pulse_dout;
+  tone_generator_pulse pulse(.accumulator(accumulator[ACCUMULATOR_BITS-1:0]), .dout(pulse_dout), .pulse_width(pulse_width));
+
+  reg [OUTPUT_BITS-1:0] dout_tmp;
 
   always @(posedge clk) begin
-
-    accumulator <= accumulator + tone_freq;
-
-    val = (2**OUTPUT_BITS)-1;
-
-    if (waveform_enable[3] == 1) // NOISE
+    if (en_sync && sync_source)
       begin
-        val = val & noise_dout;
+        accumulator <= 0;
       end
-
-    if (waveform_enable[2] == 1) // PULSE
+    else
       begin
-        if (accumulator[ACCUMULATOR_BITS-1 -: PULSEWIDTH_BITS] > pulse_width)
-          begin
-            val = val & ((2 ** OUTPUT_BITS) - 1);
-          end
-        else
-          begin
-            val = 0;
-          end
-      end
-
-    if (waveform_enable[1] == 1) // SAW
-      begin
-        // output is simply the MSB of the accumulator
-        val = val & accumulator[ACCUMULATOR_BITS-1 -: OUTPUT_BITS];
-      end
-
-    if (waveform_enable[0] == 1) // TRIANGLE
-      begin
-      if (!ringmod_enable && accumulator[ACCUMULATOR_BITS-1] == 0 || ringmod_enable && !ringmod_source)
-        begin
-          // MSB not set; we're in the rising part of the triangle waveform, do not invert
-          val = val & accumulator[ACCUMULATOR_BITS-2:(ACCUMULATOR_BITS-2)-(OUTPUT_BITS-1)];
-        end
-      else
-        begin
-          // MSB is set; we need to invert waveform
-          val = val & ~accumulator[ACCUMULATOR_BITS-2:(ACCUMULATOR_BITS-2)-(OUTPUT_BITS-1)];
-        end
+        accumulator <= accumulator[ACCUMULATOR_BITS-1:0] + tone_freq;
       end
   end
-  assign dout = val;
+
+  assign accumulator_overflow = (accumulator[ACCUMULATOR_BITS]);  /* used for syncing to other oscillators */
+
+  always @(posedge clk) begin
+    dout_tmp = (2**OUTPUT_BITS)-1;
+    if (en_noise)
+      dout_tmp = dout_tmp & noise_dout;
+    if (en_saw)
+      dout_tmp = dout_tmp & saw_dout;
+    if (en_triangle)
+      dout_tmp = dout_tmp & triangle_dout;
+    if (en_pulse)
+      dout_tmp = dout_tmp & pulse_dout;
+  end
+
+  assign dout = dout_tmp;
 
 endmodule

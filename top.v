@@ -17,15 +17,17 @@ module top (
     clock_divider #(.DIVISOR(1600000)) slowclkgen (.cin(CLK), .cout(SLOW_CLK));
 
     // triangle generator enabled @ 1kHz
-    voice voice_one(
-      .clk(ONE_MHZ_CLK), .tone_freq(16'd16772), .rst(1'b0), .ringmod_enable(1'b0), .ringmod_source(1'b0),
+    voice voice1(
+      .clk(ONE_MHZ_CLK), .tone_freq(16'd16772), .rst(1'b0),
+      .en_ringmod(1'b0), .ringmod_source(1'b0),
+      .en_sync(1'b0), .sync_source(1'b0),
       .waveform_enable(4'b0001), .pulse_width(12'd0),
       .dout(voice_data),
       .attack(4'b0001), .decay(4'b0001), .sustain(4'b1000), .rel(4'b0010),
       .gate(SLOW_CLK)
       );
 
-    pdm_dac #(.DATA_BITS(12)) ch2_dac(
+    pdm_dac #(.DATA_BITS(12)) dac1(
       .din(voice_data),
       .clk(CLK),
       .dout(PIN_1)

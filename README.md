@@ -86,8 +86,12 @@ decay and release cycles.
 | `waveform_enable:4` | `0001` = triangle /\/\/\<br>`0010` = saw /&#124;/&#124;/&#124;<br>`0100` = pulse  _-_-_-_<br>`1000` = LFSR noise (random).  <br><br>If multiple waveforms are selected, the outputs are logically ANDed together. |
 | `pulse_width:12` | when pulse waveform is selected, if accumulator < `pulse_width`, output is high; else low |
 | `rst:1` | reset; when high, the accumulator is reset; as is the ADSR envelope generator. |
-| `ringmod_enable:1` | enable the ring modulator (only has any effect when the triangle wave is selected) |
+| `en_ringmod:1` | enable the ring modulator (only has any effect when the triangle wave is selected) |
 | `ringmod_source:1` | source of modulation; should be the MSB from another voice's accumulator; this triggers the inversion of this voice's triangle waveform (as opposed to using it's own MSB). |
+| `accumulator_msb:1` | most significant bit of accumulator - used to feed ringmod source of another oscillator. |
+| `accumulator_overflow:1` | true when the value in this accumulator has wrapped past zero; used to sync with another oscillator. |
+| `en_sync:1` | enable synchronizing this oscillator with sync_source. if true, this oscillator will reset to 0 whenever sync_source is set. |
+| `sync_source:1` | when this is set to one, the oscillator's accumulator will be reset to 0. Normally fed from another oscillator to enable sync effects. |
 | `gate` | A rising gate will trigger the ADSR cycle to begin, according to the timings in the `attack`/`decay`/`sustain`/`release` parameters. A falling gate will trigger the release cycle. |
 | `attack:4` | How long it takes the envelope generator attack cycle to go from zero volume to full-scale. <br><br>`0000` = 2ms<br>`0001` = 8ms<br>`0010` = 16ms<br>`0011` = 24ms<br>`0100` = 38ms<br>`0101` = 56ms<br>`0110` = 68ms<br>`0111` = 80ms<br>`1000` = 100ms<br>`1001` = 250ms<br>`1010` = 500ms<br>`1011` = 800ms<br>`1100` = 1 second<br>`1101` = 3 seconds<br>`1110` = 5 seconds<br>`1111` = 8 seconds|
 | `decay:4` | How long it takes the envelope generator to decay from full-scale after attack to the sustain level. <br><br>`0000` = 6ms<br>`0001` = 24ms<br>`0010` = 48ms<br>`0011` = 72ms<br>`0100` = 114ms<br>`0101` = 168ms<br>`0110` = 204ms<br>`0111` = 240ms<br>`1000` = 300ms<br>`1001` = 750ms<br>`1010` = 1.5 seconds<br>`1011` = 2.4 seconds<br>`1100` = 3 seconds<br>`1101` = 9 seconds<br>`1110` = 15 seconds<br>`1111` = 24 seconds|
