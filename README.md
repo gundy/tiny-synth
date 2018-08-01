@@ -19,7 +19,7 @@ The demo project instantiates a module called a "`voice`"; The concept of a `voi
 The below circuit works well enough for me, but YMMV.
 
 ```      
-       e.g. 330 ohm      eg. 0.1uF
+       e.g. 330 ohm      eg. 10uF
   DOUT   ---./\/\/\.---o------| |-------> "Analog" output
                        |
                       ---
