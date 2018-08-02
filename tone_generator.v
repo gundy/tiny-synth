@@ -10,7 +10,7 @@
  * It allows individual tone generators to be selected and logically
  * "ANDed" into the output stream.
  *
- * It also has provision for syncing oscillators together based on 
+ * It also has provision for syncing oscillators together based on
  * when they overflow, and proving the accumulator MSB for ring
  * modulation purposes.
  */
@@ -92,6 +92,7 @@ module tone_generator #(
   end
 
   assign accumulator_overflow = (accumulator[ACCUMULATOR_BITS]);  /* used for syncing to other oscillators */
+  assign accumulator_msb = accumulator[ACCUMULATOR_BITS-1];
 
   always @(posedge clk) begin
     dout_tmp = (2**OUTPUT_BITS)-1;

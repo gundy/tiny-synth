@@ -40,11 +40,15 @@ module envelope_generator #(
   input [3:0] d,
   input [3:0] s,
   input [3:0] r,
-  output reg [7:0] amplitude,
+  output wire [7:0] amplitude,
   input rst);
 
   localparam  ACCUMULATOR_SIZE = 2**ACCUMULATOR_BITS;
   localparam  ACCUMULATOR_MAX  = ACCUMULATOR_SIZE-1;
+
+  reg [ACCUMULATOR_BITS:0] accumulator;
+  reg [16:0] accumulator_inc;  /* value to add to accumulator */
+
 
   // calculate the amount to add to the accumulator each clock cycle to
   // achieve a full-scale value in n number of seconds. (n can be fractional seconds)
@@ -100,7 +104,13 @@ module envelope_generator #(
     end
   endfunction
 
-  reg[2:0] state = 4;
+  localparam OFF     = 3'd0;
+  localparam ATTACK  = 3'd1;
+  localparam DECAY   = 3'd2;
+  localparam SUSTAIN = 3'd3;
+  localparam RELEASE = 3'd4;
+
+  reg[2:0] state = OFF;
 
 
   // value to add to accumulator during attack phase
@@ -134,54 +144,49 @@ module envelope_generator #(
   reg [16:0] dectmp;  /* scratch-register for intermediate result of decay scaling */
   reg [16:0] reltmp;  /* scratch-register for intermediate-result of release-scaling */
 
-  reg [ACCUMULATOR_BITS:0] accumulator;
-  wire [16:0] accumulator_inc;  /* value to add to accumulator */
 
   reg [7:0] exp_out;  // exponential decay mapping of accumulator output; used for decay and release cycles
   eight_bit_exponential_decay_lookup exp_lookup(.din(accumulator[ACCUMULATOR_BITS-1 -: 8]), .dout(exp_out));
 
-  function calculate_acc_inc;
-  input [2:0] s;
-    begin
-      case(s)
-        3'd0: calculate_acc_inc = attack_inc;
-        3'd1: calculate_acc_inc = decay_inc;
-        3'd2: calculate_acc_inc = 0;
-        3'd3: calculate_acc_inc = release_inc;
-        3'd4: calculate_acc_inc = 0;
-      endcase
-    end
-  endfunction
-
-  assign accumulator_inc = calculate_acc_inc(state);
-
+  /* calculate the next state of the envelope generator based on
+     the state that we've just moved past, and the gate signal */
   function [2:0] next_state;
     input [2:0] s;
     input g;
     begin
       case ({ s, g })
-        4'b0000: next_state = 3'b011;  /* attack, gate off => skip decay, sustain; go to release */
-        4'b0001: next_state = 3'b001;  /* attack, gate still on => decay */
-        4'b0010: next_state = 3'b011;  /* decay, gate off => skip sustain; go to release */
-        4'b0011: next_state = 3'b010;  /* decay, gate still on => sustain */
-        4'b0100: next_state = 3'b011;  /* sustain, gate off => go to release */
-        4'b0101: next_state = 3'b010;  /* sustain, gate on => stay in sustain */
-        4'b0110: next_state = 3'b100;  /* release, gate off => end state */
-        4'b0111: next_state = 3'b001;  /* release, gate on => attack */
-        4'b1000: next_state = 3'b100;  /* end_state, gate off => stay in end state */
-        4'b1001: next_state = 3'b000;  /* end_state, gate on => attack */
-        default: next_state = 3'b100;  /* default is end (off) state */
+        { ATTACK,  1'b0 }: next_state = RELEASE;  /* attack, gate off => skip decay, sustain; go to release */
+        { ATTACK,  1'b1 }: next_state = DECAY;    /* attack, gate still on => decay */
+        { DECAY,   1'b0 }: next_state = RELEASE;  /* decay, gate off => skip sustain; go to release */
+        { DECAY,   1'b1 }: next_state = SUSTAIN;  /* decay, gate still on => sustain */
+        { SUSTAIN, 1'b0 }: next_state = RELEASE;  /* sustain, gate off => go to release */
+        { SUSTAIN, 1'b1 }: next_state = SUSTAIN;  /* sustain, gate on => stay in sustain */
+        { RELEASE, 1'b0 }: next_state = OFF;      /* release, gate off => end state */
+        { RELEASE, 1'b1 }: next_state = ATTACK;   /* release, gate on => attack */
+        { OFF,     1'b0 }: next_state = OFF;      /* end_state, gate off => stay in end state */
+        { OFF,     1'b1 }: next_state = ATTACK;   /* end_state, gate on => attack */
+        default: next_state = OFF;  /* default is end (off) state */
       endcase
     end
   endfunction
 
+  wire overflow;
+
   always @(posedge clk)
     begin
+      case (state)
+        ATTACK:  accumulator_inc = attack_inc;
+        DECAY:   accumulator_inc = decay_inc;
+        RELEASE: accumulator_inc = release_inc;
+        default: accumulator_inc = 0;
+      endcase
+
       accumulator = accumulator + accumulator_inc;
-      case(state)
-        3'd0:
+      overflow = accumulator[ACCUMULATOR_BITS];
+     case(state)
+        ATTACK:
           begin  // ATTACK
-            if (accumulator > ACCUMULATOR_MAX)
+            if (overflow)
               begin
                 accumulator <= 0;
                 state <= next_state(state, gate);
@@ -191,9 +196,9 @@ module envelope_generator #(
                 amplitude <= accumulator[ACCUMULATOR_BITS-1 -: 8];
               end
           end
-        3'd1:
+        DECAY:
             begin // DECAY
-              if (accumulator > ACCUMULATOR_MAX)
+              if (overflow)
                 begin
                   accumulator <= 0;
                   amplitude <= sustain_volume;
@@ -205,33 +210,31 @@ module envelope_generator #(
                   amplitude = dectmp;
                 end
             end
-          3'd2:
+          SUSTAIN:
               begin // SUSTAIN
                 amplitude <= sustain_volume;
                 accumulator <= 0;
                 state <= next_state(state, gate);
               end
-          3'd3:
+          RELEASE:
               begin  // RELEASE
-                if (gate) begin // re-gated during release phase, reset to attack
-                    amplitude <= 0;
-                    state <= 3'd0;
-                    accumulator <= 0;
-                  end
-                else
-                  begin
-                  if (accumulator >= ACCUMULATOR_MAX)
+                  if (overflow)
                     begin
                       amplitude <= 0;
                       accumulator <= 0;
                       state <= next_state(state, gate);
                     end
-                  else
-                    begin
-                      reltmp <= ((exp_out * sustain_volume) >> 8);
-                      amplitude = reltmp;
-                    end
-                end
+                  else begin
+                    reltmp <= ((exp_out * sustain_volume) >> 8);
+                    amplitude <= reltmp;
+                    if (gate)
+                      begin
+                      // re-gated during release phase, reset to attack
+//                        amplitude <= 0;
+                        state <= ATTACK;
+                        accumulator <= 0;
+                      end
+                  end
               end
         default:
           begin
@@ -239,6 +242,6 @@ module envelope_generator #(
             accumulator <= 0;
             state <= next_state(state, gate);
           end
-      endcase
+     endcase
     end
 endmodule
