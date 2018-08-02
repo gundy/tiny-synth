@@ -13,7 +13,7 @@ module top (
     reg trigger_in;
     SB_IO #(
         .PIN_TYPE(6'b0000_01),
-        .PULLUP(1'b0)
+        .PULLUP(1'b1)
     ) gate_trigger_io_conf (
       .PACKAGE_PIN(PIN_13),
       .D_IN_0(trigger_in)
@@ -32,7 +32,7 @@ module top (
       .waveform_enable(4'b0010), .pulse_width(12'd2047),
       .dout(voice_data),
       .attack(4'b0011), .decay(4'b0100), .sustain(4'b1000), .rel(4'b1100),
-      .gate(trigger_in)
+      .gate(!trigger_in)
       // .gate(SLOW_CLK)
       );
 
