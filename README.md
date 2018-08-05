@@ -73,6 +73,10 @@ To get started quickly, all that you really need to do is instantiate a ```voice
     );
 ```
 
+## Examples
+
+The `/examples` folder contains a number of examples which give ideas for composing the various elements in tiny-synth into higher-level abstractions.
+
 # Modules
 
 ## `voice`

@@ -1,3 +1,5 @@
+`ifndef __TINY_SYNTH_TONE_PULSE__
+`define __TINY_SYNTH_TONE_PULSE__
 /* =============================
  * Pulse (square) tone generator
  * =============================
@@ -29,3 +31,5 @@ module tone_generator_pulse #(
   assign dout = (accumulator[ACCUMULATOR_BITS-1 -: PULSEWIDTH_BITS] <= pulse_width) ? MAX_SCALE : 0;
 
 endmodule
+
+`endif

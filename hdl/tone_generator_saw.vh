@@ -1,3 +1,5 @@
+`ifndef __TINY_SYNTH_TONE_SAW__
+`define __TINY_SYNTH_TONE_SAW__
 /* =============================
  * Sawtooth tone generator
  * =============================
@@ -18,3 +20,5 @@ module tone_generator_saw #(
   assign dout = accumulator[ACCUMULATOR_BITS-1 -: OUTPUT_BITS];
 
 endmodule
+
+`endif

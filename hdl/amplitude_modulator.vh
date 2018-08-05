@@ -1,3 +1,5 @@
+`ifndef __TINY_SYNTH_AMPLITUDE_MODULATOR__
+`define __TINY_SYNTH_AMPLITUDE_MODULATOR__
 /* =====================
  *  amplitude modulator
  * =====================
@@ -8,7 +10,7 @@
  * Principle of operation:
  *
  * Converts data-in (din) to a signed value (-128..127 instead of 0..255),
- * scales it according to the amplitude input, and then converts the result back 
+ * scales it according to the amplitude input, and then converts the result back
  * to unsigned again for output.
  *
  */
@@ -43,3 +45,5 @@ module amplitude_modulator #(
   assign dout = scaled_din[DATA_BITS+AMPLITUDE_BITS-1 -: DATA_BITS] ^ D_SIGNED_BITMASK;
 
 endmodule
+
+`endif

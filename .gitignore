@@ -3,6 +3,8 @@ hardware.asc
 hardware.bin
 hardware.blif
 hardware.rpt
+*.out
+*.vcd
 *.idea
 **/*.iml
 *.bin

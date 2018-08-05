@@ -1,3 +1,11 @@
+`ifndef __TINY_SYNTH_TONE_GENERATOR_AGGREGATE__
+`define __TINY_SYNTH_TONE_GENERATOR_AGGREGATE__
+
+`include "tone_generator_saw.vh"
+`include "tone_generator_pulse.vh"
+`include "tone_generator_triangle.vh"
+`include "tone_generator_noise.vh"
+
 /* ================================
  * Phase-accumulator tone-generator
  * ================================
@@ -109,3 +117,5 @@ module tone_generator #(
   assign dout = dout_tmp;
 
 endmodule
+
+`endif

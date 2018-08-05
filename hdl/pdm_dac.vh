@@ -1,3 +1,5 @@
+`ifndef __TINY_SYNTH_PDM_DAC__
+`define __TINY_SYNTH_PDM_DAC__
 /* ============================
  * Pulse-density modulated DAC
  * ============================
@@ -31,3 +33,5 @@ end
 assign dout = accumulator[DATA_BITS];
 
 endmodule
+
+`endif

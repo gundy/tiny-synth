@@ -1,3 +1,6 @@
+`ifndef __TINY_SYNTH_CLOCK_DIVIDER__
+`define __TINY_SYNTH_CLOCK_DIVIDER__
+
 module clock_divider #(
   parameter DIVISOR = 28'd2
 )
@@ -11,11 +14,17 @@ localparam [27:0] INCREMENT = $rtoi(FULL_SCALE / DIVISOR);
 
 reg [27:0] counter;
 
+initial begin
+  counter = 0;
+end
+
 always @(posedge cin)
 begin
-  counter <= counter + INCREMENT;
+  counter = counter + INCREMENT;
 end
 
 assign cout = counter[27];
 
 endmodule
+
+`endif

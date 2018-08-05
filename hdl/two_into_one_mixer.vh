@@ -1,3 +1,6 @@
+`ifndef __TINY_SYNTH_TWO_INTO_ONE_MIXER__
+`define __TINY_SYNTH_TWO_INTO_ONE_MIXER__
+
 /* ===================
  * Two-into-one mixer
  * ===================
@@ -19,3 +22,5 @@ module two_into_one_mixer #(
   assign dout = intermediate >> 1;
 
 endmodule
+
+`endif

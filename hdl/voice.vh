@@ -1,3 +1,10 @@
+`ifndef __TINY_SYNTH_VOICE__
+`define __TINY_SYNTH_VOICE__
+
+`include "tone_generator.vh"
+`include "envelope_generator.vh"
+`include "amplitude_modulator.vh"
+
 module voice #(
   parameter OUTPUT_BITS = 12,
   parameter FREQ_BITS = 16,
@@ -70,3 +77,5 @@ module voice #(
   );
 
 endmodule
+
+`endif

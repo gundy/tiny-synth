@@ -1,3 +1,8 @@
+`ifndef __TINY_SYNTH_ENV_GENERATOR__
+`define __TINY_SYNTH_ENV_GENERATOR__
+
+`include "eight_bit_exponential_decay_lookup.vh"
+
 /* ===================
  * Envelope generator
  * ===================
@@ -40,7 +45,7 @@ module envelope_generator #(
   input [3:0] d,
   input [3:0] s,
   input [3:0] r,
-  output wire [7:0] amplitude,
+  output reg [7:0] amplitude,
   input rst);
 
   localparam  ACCUMULATOR_SIZE = 2**ACCUMULATOR_BITS;
@@ -230,7 +235,6 @@ module envelope_generator #(
                     if (gate)
                       begin
                       // re-gated during release phase, reset to attack
-//                        amplitude <= 0;
                         state <= ATTACK;
                         accumulator <= 0;
                       end
@@ -245,3 +249,5 @@ module envelope_generator #(
      endcase
     end
 endmodule
+
+`endif

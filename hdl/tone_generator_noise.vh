@@ -1,3 +1,6 @@
+`ifndef __TINY_SYNTH_TONE_NOISE__
+`define __TINY_SYNTH_TONE_NOISE__
+
 /* ============================
  * Random noise tone generator
  * ============================
@@ -58,3 +61,5 @@ module tone_generator_noise #(
   assign dout = { lsfr[22], lsfr[20], lsfr[16], lsfr[13], lsfr[11], lsfr[7], lsfr[4], lsfr[2], {(OUTPUT_BITS-8){1'b0}} };
 
 endmodule
+
+`endif

@@ -1,5 +1,7 @@
+`ifndef __TINY_SYNTH_TONE_TRIANGLE__
+`define __TINY_SYNTH_TONE_TRIANGLE__
 /* =============================
- * Sawtooth tone generator
+ * Triangle tone generator
  * =============================
  *
  * Generates a triangle-wave; optionally ring-modulated with the MSB of
@@ -42,3 +44,5 @@ module tone_generator_triangle #(
                             : accumulator[ACCUMULATOR_BITS-2 -: OUTPUT_BITS];
 
 endmodule
+
+`endif
