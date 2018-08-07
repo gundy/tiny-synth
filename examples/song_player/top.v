@@ -18,6 +18,8 @@
 `define __TINY_SYNTH_ROOT_FOLDER "../.."
 `include "../../hdl/tiny-synth-all.vh"
 
+`include "song_player.vh"
+
 // look in pins.pcf for all the pin names on the TinyFPGA BX board
 module top (
     input CLK,    // 16MHz clock
@@ -30,8 +32,9 @@ module top (
 
     localparam MAIN_CLK_FREQ = 16000000;
     localparam BPM = 120;            // 0.5s per quarter note = 2Hz
-    localparam TIME_SIG_TOP = 8;
-    localparam TIME_SIG_BOTTOM = 8;
+    localparam TIME_SIG_TOP = 16;
+    localparam TIME_SIG_BOTTOM = 16;
+    localparam TICKS_PER_BEAT = 8;
 
     // Frequency in Hz that we need to tick through each row
     // in a bar.
@@ -39,12 +42,15 @@ module top (
 
     // amount we need to divide the main clock by to get our tick clock
     localparam TICK_DIVISOR = $rtoi(MAIN_CLK_FREQ / TICK_HZ);
-    60 * ((BPM * 2) * TIME_SIG_BOTTOM)
 
     wire tick_clock;
     clock_divider #(.DIVISOR(TICK_DIVISOR)) tick_divider(.cin(CLK), .cout(tick_clock));
 
+    wire ONE_MHZ_CLK;
+    clock_divider #(.DIVISOR(16)) mhz_clk_divider(.cin(CLK), .cout(ONE_MHZ_CLK));
 
+    wire[11:0] final_mix;
+    song_player player(.main_clk(ONE_MHZ_CLK), .tick_clock(tick_clock), .audio_out(final_mix));
 
     pdm_dac #(.DATA_BITS(12)) dac1(
       .din(final_mix),
