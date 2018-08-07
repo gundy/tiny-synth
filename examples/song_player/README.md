@@ -80,6 +80,8 @@ These bars could equally have been written with gaps every second row - ie. in 8
 
 The effect is the same, but each slot now represents an eighth note.  Assuming that our player plays this bar at twice the rate of our first example, it will sound exactly the same, but if we wanted to we could insert extra notes in-between the ones that we played before.
 
+By choosing a bar length that fits with the musical motifs that you're using, you can make composition easier, and allow the song to compress into a smaller amount of space.
+
 If you're familiar with "tracker" software from the 90's, this is probably starting to seem quite familiar.
 
 ### Patterns

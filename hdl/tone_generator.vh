@@ -53,7 +53,7 @@ module tone_generator #(
   wire [OUTPUT_BITS-1:0] noise_dout;
   tone_generator_noise #(
     .OUTPUT_BITS(OUTPUT_BITS)
-  ) noise(.clk(accumulator[19]), .rst(rst), .dout(noise_dout));
+  ) noise(.clk(accumulator[18]), .rst(rst), .dout(noise_dout));
 
   wire [OUTPUT_BITS-1:0] triangle_dout;
   tone_generator_triangle #(
