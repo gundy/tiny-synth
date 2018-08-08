@@ -20,5 +20,14 @@
 // pattern 5
 03 04 05 06
 
-// pattern 6 - empty
+// pattern 6
+01 04 05 07
+
+// pattern 7
+02 04 05 07
+
+// pattern 8
+03 04 05 07
+
+// pattern 9 - empty
 00 00 00 00

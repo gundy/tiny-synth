@@ -8,10 +8,10 @@
 `include "../../hdl/tiny-synth-all.vh"
 
 `define NUM_ROWS_PER_BAR (16)
-`define NUM_BARS (7)
+`define NUM_BARS (8)
 `define NUM_CHANNELS (4)
-`define NUM_PATTERNS (7)
-`define SONG_LENGTH (25)
+`define NUM_PATTERNS (10)
+`define SONG_LENGTH (24)
 
 /********************************\
 * BAR                            *
@@ -147,11 +147,7 @@ endmodule
    bar_rom ch2_bar_rom(.bar_idx(current_bar_for_channel[2]),  .note(current_note_for_channel[2]), .row_idx(bar_position));
    bar_rom ch3_bar_rom(.bar_idx(current_bar_for_channel[3]),  .note(current_note_for_channel[3]), .row_idx(bar_position));
 
-<<<<<<< HEAD
-   // look up the appropriate frequency to play for each channel based on the note (map note -> octave 6 frequency, and then shift right by (6 - requested octave))
-=======
-   // look up the appropriate frequency to play for each channel (note -> octave 6 frequency, and then shift right by 6 - actual octave)
->>>>>>> e81111eb39586e1036ef53c63cf8307c2463e617
+   // look up the appropriate frequency to play for each channel based on the note (map note to octave 6 frequency, and then shift right by (6 - requested octave))
    wire[15:0] current_freq_for_channel[0:3];
    assign current_freq_for_channel[0] = note_to_freq(current_note_for_channel[0][7:4]) >> (6 - current_note_for_channel[0][3:0]);
    assign current_freq_for_channel[1] = note_to_freq(current_note_for_channel[1][7:4]) >> (6 - current_note_for_channel[1][3:0]);
@@ -166,21 +162,18 @@ endmodule
 
    // instrument definitions
    // voice 1/channel 1 = bass-riff
-<<<<<<< HEAD
-   wire[11:0] saw_out;
-=======
->>>>>>> e81111eb39586e1036ef53c63cf8307c2463e617
+   wire[11:0] bass_out;
    voice channel1_instrument(
      .clk(main_clk), .tone_freq(instrument_frequency[0]), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
-     .waveform_enable(4'b0010), .pulse_width(12'd2047),
-     .dout(channel_samples[0]),
-     .attack(4'b0100), .decay(4'b0010), .sustain(4'b0110), .rel(4'b1100),
+     .waveform_enable(4'b0100), .pulse_width(12'd400),
+     .dout(bass_out),
+     .attack(4'b0100), .decay(4'b0010), .sustain(4'b0011), .rel(4'b1100),
      .gate(instrument_gate[0])
    );
 
-<<<<<<< HEAD
+   filter_ewma filter(.clk(main_clk), .s_alpha(5), .din(bass_out), .dout(channel_samples[0]));
 
    wire[11:0] kd_samples1;
    wire[11:0] kd_samples2;
@@ -191,15 +184,12 @@ endmodule
     * for a short period of time, and another that plays a relatively low
     * frequency "thud".
     */
-=======
->>>>>>> e81111eb39586e1036ef53c63cf8307c2463e617
    // voice 2 = kick drum
    voice channel2_instrument(
      .clk(main_clk), .tone_freq(instrument_frequency[1]), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b0001), .pulse_width(12'd1000),
-<<<<<<< HEAD
      .dout(kd_samples1),
      .attack(4'b0001), .decay(4'b0010), .sustain(4'b1111), .rel(4'b0010),
      .gate(instrument_gate[1])
@@ -215,16 +205,10 @@ endmodule
      .gate(instrument_gate[1])
    );
    two_into_one_mixer kd_mix(.a(kd_samples1), .b(kd_samples2), .dout(channel_samples[1]));
-=======
-     .dout(channel_samples[1]),
-     .attack(4'b0001), .decay(4'b0010), .sustain(4'b1100), .rel(4'b0010),
-     .gate(instrument_gate[1])
-   );
->>>>>>> e81111eb39586e1036ef53c63cf8307c2463e617
 
    // voice 3 = open high hat
    voice channel3_instrument(
-     .clk(main_clk), .tone_freq(instrument_frequency[2]), .rst(1'b0),
+     .clk(main_clk), .tone_freq(16'd50000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd400),
@@ -235,16 +219,12 @@ endmodule
 
    // voice 4 = "snare" :)
    voice channel4_instrument(
-     .clk(main_clk), .tone_freq(instrument_frequency[3]), .rst(1'b0),
+     .clk(main_clk), .tone_freq(16'd6000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
-<<<<<<< HEAD
-     .waveform_enable(4'b1100), .pulse_width(12'd400),
-=======
-     .waveform_enable(4'b1001), .pulse_width(12'd400),
->>>>>>> e81111eb39586e1036ef53c63cf8307c2463e617
+     .waveform_enable(4'b1000), .pulse_width(12'd400),
      .dout(channel_samples[3]),
-     .attack(4'b0010), .decay(4'b0010), .sustain(4'b1111), .rel(4'b1000),
+     .attack(4'b0010), .decay(4'b0100), .sustain(4'b0011), .rel(4'b0110),
      .gate(instrument_gate[3])
    );
 
@@ -261,7 +241,17 @@ endmodule
            instrument_gate[ch] = 1;
          end // end if
        end // end for
+     end else begin /* tick_timer != 0 */
+       if (tick_timer == 3) begin  /* turn off gate ~50% through tick */
+         for (ch = 0; ch <= 3; ch++) begin
+           instrument_gate[ch] = 0; // turn off trigger
+         end
+       end
+     end
 
+     tick_timer = tick_timer + 1;
+
+     if (tick_timer == 0) begin
        // increment bar and song counters
        bar_position = bar_position + 1;
        if (bar_position >= `NUM_ROWS_PER_BAR) begin
@@ -271,13 +261,8 @@ endmodule
            song_position = 0;
          end
        end
-     end else begin /* tick_timer != 0 */
-       for (ch = 0; ch <= 3; ch++) begin
-         instrument_gate[ch] = 0; // turn off trigger
-       end
-     end
+    end
 
-     tick_timer = tick_timer + 1;
    end // end always @posedge tick_clock
 
 

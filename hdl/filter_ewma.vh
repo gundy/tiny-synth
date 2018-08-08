@@ -68,8 +68,8 @@
 module filter_ewma (
   input clk,
   input wire signed [8:0] s_alpha,
-  input wire unsigned [11:0] din,  /* unfiltered data in */
-  output reg unsigned [11:0] dout  /* filtered data out */
+  input wire [11:0] din,  /* unfiltered data in */
+  output reg [11:0] dout  /* filtered data out */
 );
 
 
