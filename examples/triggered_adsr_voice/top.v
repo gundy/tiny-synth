@@ -44,10 +44,15 @@ module top (
     wire ONE_MHZ_CLK; /* 1MHz clock for tone generator */
     clock_divider #(.DIVISOR(16)) mhzclkgen (.cin(CLK), .cout(ONE_MHZ_CLK));
 
+    wire SAMPLE_CLK;
+    clock_divider #(
+      .DIVISOR((16000000/44100))
+    ) sample_clk_divider(.cin(CLK), .cout(SAMPLE_CLK));
+
     // tone_freq is calculated by (16777216 * freq) / 1000000
     // so, for 261.63Hz (Middle C), tone_freq needs to be 4389.
     voice voice_c(
-      .clk(ONE_MHZ_CLK), .tone_freq(16'd4389) /* C4, 261.63Hz */, .rst(1'b0),
+      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd4389) /* C4, 261.63Hz */, .rst(1'b0),
       .en_ringmod(1'b0), .ringmod_source(1'b0),
       .en_sync(1'b0), .sync_source(1'b0),
       .waveform_enable(4'b0001), .pulse_width(12'd2047),
@@ -57,7 +62,7 @@ module top (
     );
 
     voice voice_e(
-      .clk(ONE_MHZ_CLK), .tone_freq(16'd5530) /* E4, 329.63Hz */, .rst(1'b0),
+      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd5530) /* E4, 329.63Hz */, .rst(1'b0),
       .en_ringmod(1'b0), .ringmod_source(1'b0),
       .en_sync(1'b0), .sync_source(1'b0),
       .waveform_enable(4'b0001), .pulse_width(12'd2047),
@@ -67,7 +72,7 @@ module top (
     );
 
     voice voice_g(
-      .clk(ONE_MHZ_CLK), .tone_freq(16'd6577) /* G4, 392.00Hz */, .rst(1'b0),
+      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd6577) /* G4, 392.00Hz */, .rst(1'b0),
       .en_ringmod(1'b0), .ringmod_source(1'b0),
       .en_sync(1'b0), .sync_source(1'b0),
       .waveform_enable(4'b0001), .pulse_width(12'd2047),
@@ -84,7 +89,7 @@ module top (
 
     pdm_dac #(.DATA_BITS(12)) dac1(
       .din(final_mix),
-      .clk(CLK),
+      .clk(main_clk),
       .dout(PIN_1)
     );
 

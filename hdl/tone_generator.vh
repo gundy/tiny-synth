@@ -31,7 +31,8 @@ module tone_generator #(
 (
   input [FREQ_BITS-1:0] tone_freq,
   input [PULSEWIDTH_BITS-1:0] pulse_width,
-  input clk,
+  input main_clk,
+  input sample_clk,
   input rst,
   output wire [OUTPUT_BITS-1:0] dout,
   output wire accumulator_msb,
@@ -88,7 +89,7 @@ module tone_generator #(
 
   reg [OUTPUT_BITS-1:0] dout_tmp;
 
-  always @(posedge clk) begin
+  always @(posedge main_clk) begin
     if (en_sync && sync_source)
       begin
         accumulator <= 0;
@@ -102,7 +103,7 @@ module tone_generator #(
   assign accumulator_overflow = (accumulator[ACCUMULATOR_BITS]);  /* used for syncing to other oscillators */
   assign accumulator_msb = accumulator[ACCUMULATOR_BITS-1];
 
-  always @(posedge clk) begin
+  always @(posedge sample_clk) begin
     dout_tmp = (2**OUTPUT_BITS)-1;
     if (en_noise)
       dout_tmp = dout_tmp & noise_dout;

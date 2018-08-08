@@ -80,6 +80,7 @@ endmodule
 
  module song_player (
    input wire main_clk,
+   input wire sample_clk,
    input wire tick_clock,
    output [11:0] audio_out
  );
@@ -162,18 +163,20 @@ endmodule
 
    // instrument definitions
    // voice 1/channel 1 = bass-riff
+   // this instrument is created by taking a saw-tooth wave and passing it through
+   // quite a strong low-pass filter to trim off some of the higher harmonics.
    wire[11:0] bass_out;
    voice channel1_instrument(
-     .clk(main_clk), .tone_freq(instrument_frequency[0]), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[0]), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b0100), .pulse_width(12'd400),
      .dout(bass_out),
-     .attack(4'b0100), .decay(4'b0010), .sustain(4'b0011), .rel(4'b1100),
+     .attack(4'b0100), .decay(4'b0010), .sustain(4'b1010), .rel(4'b1100),
      .gate(instrument_gate[0])
    );
 
-   filter_ewma filter(.clk(main_clk), .s_alpha(5), .din(bass_out), .dout(channel_samples[0]));
+   filter_ewma filter(.clk(sample_clk), .s_alpha(10), .din(bass_out), .dout(channel_samples[0]));
 
    wire[11:0] kd_samples1;
    wire[11:0] kd_samples2;
@@ -186,7 +189,7 @@ endmodule
     */
    // voice 2 = kick drum
    voice channel2_instrument(
-     .clk(main_clk), .tone_freq(instrument_frequency[1]), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[1]), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b0001), .pulse_width(12'd1000),
@@ -196,7 +199,7 @@ endmodule
    );
    // voice 2, part 2 = kick drum part 2 (noise oscillator)
    voice channel2b_instrument(
-     .clk(main_clk), .tone_freq(16'd18000), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd18000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd1000),
@@ -208,7 +211,7 @@ endmodule
 
    // voice 3 = open high hat
    voice channel3_instrument(
-     .clk(main_clk), .tone_freq(16'd50000), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd50000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd400),
@@ -219,12 +222,12 @@ endmodule
 
    // voice 4 = "snare" :)
    voice channel4_instrument(
-     .clk(main_clk), .tone_freq(16'd6000), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd2000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd400),
      .dout(channel_samples[3]),
-     .attack(4'b0010), .decay(4'b0100), .sustain(4'b0011), .rel(4'b0110),
+     .attack(4'b0010), .decay(4'b0100), .sustain(4'b0011), .rel(4'b0010),
      .gate(instrument_gate[3])
    );
 

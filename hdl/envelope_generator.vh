@@ -35,7 +35,7 @@
  * The decay and release phases use an exponential fall-off.
  */
 module envelope_generator #(
-  parameter CLK_FREQ = 1000000,
+  parameter SAMPLE_CLK_FREQ = 44100,
   parameter ACCUMULATOR_BITS = 26
 )
 (
@@ -57,7 +57,7 @@ module envelope_generator #(
 
   // calculate the amount to add to the accumulator each clock cycle to
   // achieve a full-scale value in n number of seconds. (n can be fractional seconds)
-  `define CALCULATE_PHASE_INCREMENT(n) $rtoi(ACCUMULATOR_SIZE / (n * CLK_FREQ))
+  `define CALCULATE_PHASE_INCREMENT(n) $rtoi(ACCUMULATOR_SIZE / (n * SAMPLE_CLK_FREQ))
 
   function [16:0] attack_table;
     input [3:0] param;
@@ -150,7 +150,7 @@ module envelope_generator #(
   reg [16:0] reltmp;  /* scratch-register for intermediate-result of release-scaling */
 
 
-  reg [7:0] exp_out;  // exponential decay mapping of accumulator output; used for decay and release cycles
+  wire [7:0] exp_out;  // exponential decay mapping of accumulator output; used for decay and release cycles
   eight_bit_exponential_decay_lookup exp_lookup(.din(accumulator[ACCUMULATOR_BITS-1 -: 8]), .dout(exp_out));
 
   /* calculate the next state of the envelope generator based on
@@ -175,7 +175,7 @@ module envelope_generator #(
     end
   endfunction
 
-  wire overflow;
+  reg overflow;
 
   always @(posedge clk)
     begin
