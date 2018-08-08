@@ -39,13 +39,13 @@ module instrument(
 
 The two main inputs of interest are tone_frequency and trigger. You can set an instrument to play a particular note, and then trigger it. Easy.
 
-### Bars
+### Bars and rows
 
 A bar represents a [musical bar](https://en.wikipedia.org/wiki/Bar_(music)), in other words a set of notes that will be played one after the other.
 
-Unlike a musical bar however, bars here are not polyphonic.  You can only trigger one instrument in each time slot (row).
+Unlike a musical bar however, bars in this song player are not polyphonic.  We're only able to trigger one instrument in each row.
 
-An example couple of bars might look like:
+An example bar might look like this:
 
 | Row # | Note | Octave |
 | --- | ---: | --- |
@@ -53,19 +53,14 @@ An example couple of bars might look like:
 |1 | `C`  | `2` |
 |2 | `D`  | `2` |
 |3 | `C`  | `2` |
+|4 | `D#` | `2` |
+|5 | `C`  | `2` |
+|6 | `F`  | `2` |
+|7 | `D#` | `2` |
 
-| Row # | Note | Octave |
-| --- | ---: | --- |
-|0 | `D#` | `2` |
-|1 | `C`  | `2` |
-|2 | `F`  | `2` |
-|3 | `D#` | `2` |
+In the bars above, assuming we're playing in 4/4 time, each time slot represents an eighth note.
 
-In the bars above, assuming we're playing in 4/4 time, each time slot represents a quarter note.
-
-If you're able to, try playing the above bars slowly on an instrument and see what they sound like.
-
-These bars could equally have been written with gaps every second row - ie. in 8/8 time:
+These bars could equally have been written with gaps every second row - ie. each time step representing 1/16th note:
 
 | Row # | Note | Octave |
 | --- | ---: | --- |
@@ -76,13 +71,27 @@ These bars could equally have been written with gaps every second row - ie. in 8
 |4 | `D`  | `2` |
 |5 | - | - |
 |6 | `C`  | `2` |
-|7 | - | - |
+|... | ... | ... |
+|... | ... | ... |
+|E | `D#` | `2` |
+|F | - | - |
 
-The effect is the same, but each slot now represents an eighth note.  Assuming that our player plays this bar at twice the rate of our first example, it will sound exactly the same, but if we wanted to we could insert extra notes in-between the ones that we played before.
+The effect is the same, but each slot now represents an sixteenth note.  Assuming that our player plays this bar at twice the rate of our first example, it will sound exactly the same, but if we wanted to we could now insert extra notes in-between the ones that we played before.
 
-By choosing a bar length that fits with the musical motifs that you're using, you can make composition easier, and allow the song to compress into a smaller amount of space.
+By choosing a bar length that fits with the musical motifs that you're using, you can make composition easier, and also allow the song to compress into a smaller amount of space.
 
 If you're familiar with "tracker" software from the 90's, this is probably starting to seem quite familiar.
+
+Bars in the demo-song are stored in the `example_song_bars.rom` file, which also contains a few hints about how the encoding works.  Each note is stored as an 8-bit value. The high nibble is the note (`C`=`0x1`,`C#`=`0x2`,...,`B`=`0xC`), and the low nibble is the octave (0..6).  A value of `00` means that the note will be skipped.
+
+### Ticks
+
+You may notice a reference to the tick counter in the code if you go digging.
+
+What I neglected to mention about Bars and Rows above is that each row is actually split into 8 "ticks".
+The reason for this is to allow for sub-row processing such as instrument gating and effect processing.
+
+As it stands now, instruments are gated on for one "tick", and then gated off.  A potential future enhancement might be to change the bar structure so that each row could also provide "gate on length".
 
 ### Patterns
 
@@ -90,24 +99,32 @@ Patterns combine a number of rows together; each row being assigned to a particu
 
 #### Example pattern:
 
-`Pattern 0:`
-
 | Channel # | 0 | 1 | 2 | 3 |
 | --- | --- | --- | --- |
-| *Bar #* | 1 | 2 | 3 | 7 |
+| *Bar #* | 1 | 2 | 0 | 0 |
 
-Channels are mapped globally to particular instruments, so in the example above, channel 0 might be a bass instrument, 1 and 2 might be assigned to a piano, and 3 might be for percussion.
+The above pattern can be interpreted as "Play Bar 1 on channel 0, Bar 2 on Channel 1, and Bar 0 on Channels 2 and 3".
+
+Channels are mapped globally to particular instruments, so in the example above, channel 0 might be a bass instrument, 1 might be assigned to a piano, and 2/3 might be for percussion.
+
+Patterns in the demo song are stored in the `example_song_patterns.rom` file.
 
 ### Songs
 
-You might have guessed already, but a song is simply:
+You might have guessed already, but a song is really only:
 
 * Details about the time signature and tempo to use
 * A mapping of channels to instruments
 * An ordered list of patterns to play
 
-### Bringing it all together
+The ordered list of patterns to play for the demo song is stored in the `example_song_pattern_map.rom` file.
 
-So,
+### Homework
 
-Song > Pattern > Bar and Instrument - that's all there is to it.
+Try playing with the code. Change the bar and pattern rom files and see
+what effect this has.  If you change the song length or number of bars you'll also need to update
+the constants in the song_player.vh file.
+
+Try changing the instrument definitions for each channel in the song_player.vh file.
+
+Have fun!
