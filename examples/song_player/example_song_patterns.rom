@@ -1,0 +1,33 @@
+// 4 channels per pattern * N patterns
+
+// look in the bars ROM to see what each channel will be playing
+
+// PATTERN 0
+01 00 00 00
+
+// PATTERN 1
+02 00 00 00
+
+// PATTERN 2
+03 00 00 00
+
+// pattern 3
+01 04 05 06
+
+// pattern 4
+02 04 05 06
+
+// pattern 5
+03 04 05 06
+
+// pattern 6
+01 04 05 07
+
+// pattern 7
+02 04 05 07
+
+// pattern 8
+03 04 05 07
+
+// pattern 9 - empty
+00 00 00 00

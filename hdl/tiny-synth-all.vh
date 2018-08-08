@@ -17,6 +17,6 @@
 `include "tone_generator.vh"
 `include "two_into_one_mixer.vh"
 `include "voice.vh"
-`include "filter_ewma.h"
+`include "filter_ewma.vh"
 
 `endif
