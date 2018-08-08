@@ -5,6 +5,8 @@
 `define __TINY_SYNTH_ROOT_FOLDER ("../..")
 `endif
 
+`include "../../hdl/tiny-synth-all.vh"
+
 `define NUM_ROWS_PER_BAR (16)
 `define NUM_BARS (7)
 `define NUM_CHANNELS (4)

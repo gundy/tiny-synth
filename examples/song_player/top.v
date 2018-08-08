@@ -16,8 +16,6 @@
  */
 
 `define __TINY_SYNTH_ROOT_FOLDER "../.."
-`include "../../hdl/tiny-synth-all.vh"
-
 `include "song_player.vh"
 
 // look in pins.pcf for all the pin names on the TinyFPGA BX board
@@ -31,14 +29,33 @@ module top (
     assign USBPU = 0;
 
     localparam MAIN_CLK_FREQ = 16000000;
-    localparam BPM = 120;            // 0.5s per quarter note = 2Hz
-    localparam TIME_SIG_TOP = 16;
-    localparam TIME_SIG_BOTTOM = 16;
-    localparam TICKS_PER_BEAT = 8;
+    localparam BPM = 120;
 
-    // Frequency in Hz that we need to tick through each row
-    // in a bar.
-    localparam TICK_HZ = ((BPM * 2) / 60) * TIME_SIG_BOTTOM;
+    // TICK_HZ is the frequency in Hz that we are
+    // going to tick through each row in a bar.
+
+    // We want each step in a bar to represent an 1/8th note.
+
+    // At 120bpm, we have 120 quarter-notes per minute.
+    // This is two quarter-notes per second.
+
+    // This means that we need to send ticks at four ticks
+    // per second (twice as fast) so that each step represents
+    // 1/8th note, or 8 ticks per second (four times as fast)
+    // for 16th notes.
+
+    // The bars in the demo song are arranged as 16th notes,
+    // so to get the "step" frequency we multiply BPM by 4
+    // and then divide by 60.
+
+    // Finally, we multiply by eight, because the tick clock
+    // actually gets divided by 8 in the player so that it
+    // can perform sub-tick tasks (eg.
+    // gating/ungating the envelope generator, and in future
+    // performing effect processing).
+
+    // We want to step through 1 bar in approximately 2 seconds.
+    localparam TICK_HZ = ((BPM * 4) / 60) * 8;
 
     // amount we need to divide the main clock by to get our tick clock
     localparam TICK_DIVISOR = $rtoi(MAIN_CLK_FREQ / TICK_HZ);
