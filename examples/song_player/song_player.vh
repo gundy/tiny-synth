@@ -163,14 +163,14 @@ endmodule
 
    // instrument definitions
    // voice 1/channel 1 = bass-riff
-   // this instrument is created by taking a saw-tooth wave and passing it through
+   // this instrument is created by taking a pulse wave and passing it through
    // quite a strong low-pass filter to trim off some of the higher harmonics.
    wire[11:0] bass_out;
    voice channel1_instrument(
      .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[0]), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
-     .waveform_enable(4'b0100), .pulse_width(12'd400),
+     .waveform_enable(4'b0100), .pulse_width(12'd600),
      .dout(bass_out),
      .attack(4'b0100), .decay(4'b0010), .sustain(4'b1010), .rel(4'b1100),
      .gate(instrument_gate[0])
