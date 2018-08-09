@@ -9,12 +9,14 @@ module voice #(
   parameter OUTPUT_BITS = 12,
   parameter FREQ_BITS = 16,
   parameter PULSEWIDTH_BITS = 12,
-  parameter ACCUMULATOR_BITS = 24
+  parameter ACCUMULATOR_BITS = 24,
+  parameter SAMPLE_CLK_FREQ = 44100
 )(
   input [FREQ_BITS-1:0] tone_freq,
   input [3:0] waveform_enable,
   input [PULSEWIDTH_BITS-1:0] pulse_width,
-  input clk,
+  input main_clk,
+  input sample_clk,
   input rst,
   output wire [OUTPUT_BITS-1:0] dout,
   output wire accumulator_msb,   /* used to feed ringmod on another voice */
@@ -47,7 +49,8 @@ module voice #(
       .en_saw(waveform_enable[1]),
       .en_triangle(waveform_enable[0]),
       .pulse_width(pulse_width),
-      .clk(clk),
+      .main_clk(main_clk),
+      .sample_clk(sample_clk),
       .rst(rst),
       .dout(tone_generator_data),
       .accumulator_msb(accumulator_msb),
@@ -58,8 +61,11 @@ module voice #(
       .ringmod_source(ringmod_source)
     );
 
-  envelope_generator envelope(
-    .clk(clk),
+  envelope_generator #(
+    .SAMPLE_CLK_FREQ(SAMPLE_CLK_FREQ)
+  )
+    envelope(
+    .clk(sample_clk),
     .rst(rst),
     .gate(gate),
     .a(attack),
@@ -70,7 +76,7 @@ module voice #(
   );
 
   amplitude_modulator modulator(
-    .clk(clk),
+    .clk(sample_clk),
     .din(tone_generator_data),
     .amplitude(envelope_amplitude),
     .dout(dout)

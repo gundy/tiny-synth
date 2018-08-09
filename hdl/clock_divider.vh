@@ -2,7 +2,7 @@
 `define __TINY_SYNTH_CLOCK_DIVIDER__
 
 module clock_divider #(
-  parameter DIVISOR = 28'd2
+  parameter DIVISOR = 2
 )
 (
   input wire cin,
