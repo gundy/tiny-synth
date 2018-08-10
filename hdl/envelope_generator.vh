@@ -1,8 +1,6 @@
 `ifndef __TINY_SYNTH_ENV_GENERATOR__
 `define __TINY_SYNTH_ENV_GENERATOR__
 
-`include "eight_bit_exponential_decay_lookup.vh"
-
 /* ===================
  * Envelope generator
  * ===================
@@ -115,7 +113,13 @@ module envelope_generator #(
   localparam SUSTAIN = 3'd3;
   localparam RELEASE = 3'd4;
 
-  reg[2:0] state = OFF;
+  reg[2:0] state;
+
+  initial begin
+    state = OFF;
+    amplitude = 0;
+    accumulator = 0;
+  end
 
 
   // value to add to accumulator during attack phase
@@ -132,13 +136,12 @@ module envelope_generator #(
       decay_inc <= decay_release_table(d); // convert 4-bit value into phase increment amount
   end
 
-  reg [7:0] sustain_volume;  // 4-bit volume expanded into an 8-bit value
-  reg [7:0] sustain_gap;     // gap between sustain-volume and full-scale (255)
+  wire [7:0] sustain_volume;  // 4-bit volume expanded into an 8-bit value
+  wire [7:0] sustain_gap;     // gap between sustain-volume and full-scale (255)
                              // used to calculate decay phase scale factor
-  always @(s) begin
-    sustain_volume <= { s, 4'b0000 };
-    sustain_gap <= 255 - sustain_volume;
-  end
+
+  assign sustain_volume = { s, 4'b0000 };
+  assign sustain_gap = 255 - sustain_volume;
 
   // value to add to accumulator during release phase
   reg [16:0] release_inc;
@@ -175,79 +178,55 @@ module envelope_generator #(
     end
   endfunction
 
-  reg overflow;
+  wire overflow;
+  assign overflow = accumulator[ACCUMULATOR_BITS];
 
   always @(posedge clk)
     begin
-      case (state)
-        ATTACK:  accumulator_inc = attack_inc;
-        DECAY:   accumulator_inc = decay_inc;
-        RELEASE: accumulator_inc = release_inc;
-        default: accumulator_inc = 0;
-      endcase
-
-      accumulator = accumulator + accumulator_inc;
-      overflow = accumulator[ACCUMULATOR_BITS];
-     case(state)
-        ATTACK:
-          begin  // ATTACK
-            if (overflow)
-              begin
-                accumulator <= 0;
-                state <= next_state(state, gate);
-              end
-            else
-              begin
-                amplitude <= accumulator[ACCUMULATOR_BITS-1 -: 8];
-              end
-          end
-        DECAY:
-            begin // DECAY
-              if (overflow)
-                begin
-                  accumulator <= 0;
-                  amplitude <= sustain_volume;
-                  state <= next_state(state, gate);
-                end
-              else
-                begin
-                  dectmp <= ((exp_out * sustain_gap) >> 8) + sustain_volume;
-                  amplitude = dectmp;
-                end
+      if (overflow)
+        begin
+          accumulator <= 0;
+          dectmp <= 8'd255;
+          state <= next_state(state, gate);
+        end
+      else begin
+        case (state)
+          ATTACK:
+            begin
+              accumulator <= accumulator + attack_inc;
+              amplitude <= accumulator[ACCUMULATOR_BITS-1 -: 8];
+            end
+          DECAY:
+            begin
+              accumulator <= accumulator + decay_inc;
+              dectmp <= ((exp_out * sustain_gap) >> 8) + sustain_volume;
+              amplitude <= dectmp;
             end
           SUSTAIN:
-              begin // SUSTAIN
-                amplitude <= sustain_volume;
+          begin
+            amplitude <= sustain_volume;
+            state <= next_state(state, gate);
+          end
+          RELEASE:
+            begin
+              accumulator <= accumulator + release_inc;
+              reltmp <= ((exp_out * sustain_volume) >> 8);
+              amplitude <= reltmp;
+              if (gate) begin
+                amplitude <= 0;
                 accumulator <= 0;
                 state <= next_state(state, gate);
               end
-          RELEASE:
-              begin  // RELEASE
-                  if (overflow)
-                    begin
-                      amplitude <= 0;
-                      accumulator <= 0;
-                      state <= next_state(state, gate);
-                    end
-                  else begin
-                    reltmp <= ((exp_out * sustain_volume) >> 8);
-                    amplitude <= reltmp;
-                    if (gate)
-                      begin
-                      // re-gated during release phase, reset to attack
-                        state <= ATTACK;
-                        accumulator <= 0;
-                      end
-                  end
-              end
-        default:
-          begin
-            amplitude <= 0;
-            accumulator <= 0;
-            state <= next_state(state, gate);
-          end
-     endcase
+            end
+          default:
+            begin
+              amplitude <= 0;
+              accumulator <= 0;
+              state <= next_state(state, gate);
+            end
+        endcase
     end
+  end
 endmodule
 
 `endif

@@ -34,7 +34,7 @@ module voice #(
   input [3:0] rel
 );
 
-  wire [11:0] tone_generator_data;
+  wire [OUTPUT_BITS-1:0] tone_generator_data;
   wire[7:0] envelope_amplitude;
 
   tone_generator #(
@@ -75,7 +75,7 @@ module voice #(
     .amplitude(envelope_amplitude)
   );
 
-  amplitude_modulator modulator(
+  amplitude_modulator #(.DATA_BITS(OUTPUT_BITS)) modulator(
     .clk(sample_clk),
     .din(tone_generator_data),
     .amplitude(envelope_amplitude),
