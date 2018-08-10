@@ -8,7 +8,8 @@
  * Mixes two input signals into a single output.
  */
 module two_into_one_mixer #(
-  parameter DATA_BITS = 12)
+  parameter DATA_BITS = 12
+)
 (
   input [DATA_BITS-1:0] a,
   input [DATA_BITS-1:0] b,

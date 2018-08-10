@@ -22,8 +22,7 @@
 module top (
     input CLK,    // 16MHz clock
     output USBPU,  // USB pull-up resistor
-    output PIN_1,
-    output LED);
+    output PIN_1);
 
     // drive USB pull-up resistor to '0' to disable USB
     assign USBPU = 0;
@@ -66,6 +65,8 @@ module top (
     wire ONE_MHZ_CLK;
     clock_divider #(.DIVISOR(16)) mhz_clk_divider(.cin(CLK), .cout(ONE_MHZ_CLK));
 
+    localparam SAMPLE_BITS = 8;
+
     // divide main clock down to 44100Hz for sample output (note this clock will have
     // a bit of jitter because 44.1kHz doesn't go evenly into 16MHz).
     wire SAMPLE_CLK;
@@ -73,19 +74,13 @@ module top (
       .DIVISOR((16000000/44100))
     ) sample_clk_divider(.cin(CLK), .cout(SAMPLE_CLK));
 
-    wire[11:0] final_mix;
-    song_player player(.main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tick_clock(tick_clock), .audio_out(final_mix));
+    wire[SAMPLE_BITS-1:0] final_mix;
+    song_player #(.DATA_BITS(SAMPLE_BITS)) player(.main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tick_clock(tick_clock), .audio_out(final_mix));
 
-    pdm_dac #(.DATA_BITS(12)) dac1(
+    pdm_dac #(.DATA_BITS(SAMPLE_BITS)) dac1(
       .din(final_mix),
       .clk(CLK),  // DAC runs at full 16MHz speed.
       .dout(PIN_1)
-    );
-
-    pdm_dac #(.DATA_BITS(12)) led_dac(
-      .din(final_mix),
-      .clk(CLK),  // DAC runs at full 16MHz speed.
-      .dout(LED)
     );
 
 endmodule

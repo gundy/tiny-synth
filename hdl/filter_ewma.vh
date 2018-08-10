@@ -65,13 +65,16 @@
   *        0.32, 200
   */
 
-module filter_ewma (
+module filter_ewma #(
+  parameter DATA_BITS = 12
+) (
   input clk,
   input wire signed [8:0] s_alpha,
-  input wire [11:0] din,  /* unfiltered data in */
-  output reg [11:0] dout  /* filtered data out */
+  input wire [DATA_BITS-1:0] din,  /* unfiltered data in */
+  output reg [DATA_BITS-1:0] dout  /* filtered data out */
 );
 
+localparam HALF_SCALE = (2**(DATA_BITS-1));
 
 initial
 begin
@@ -81,23 +84,23 @@ begin
   s_adder1_out = 2047;
 end
 
-reg signed [11:0] s_delayed_dout;
-reg signed [12:0] s_adder1_out;
-reg signed [21:0] sw_raw_mul_output;
-reg signed [12:0] s_mul_out;
-reg signed [12:0] tmp_dout;
-reg signed [11:0] s_din;
+reg signed [DATA_BITS-1:0] s_delayed_dout;
+reg signed [DATA_BITS:0] s_adder1_out;
+reg signed [(DATA_BITS+8+1):0] sw_raw_mul_output;
+reg signed [DATA_BITS:0] s_mul_out;
+reg signed [DATA_BITS:0] tmp_dout;
+reg signed [DATA_BITS-1:0] s_din;
 
 always @(posedge clk)
 begin
   // copy previous dout to delay line
-  s_delayed_dout = dout ^ 12'd2048;
-  s_din = din ^ 12'd2048;
+  s_delayed_dout = dout ^ HALF_SCALE;
+  s_din = din ^ HALF_SCALE;
   s_adder1_out = s_din - s_delayed_dout;
   sw_raw_mul_output = (s_adder1_out * s_alpha) >>> 8;  // divide by 256 (amplitude)
-  s_mul_out = sw_raw_mul_output[12:0];
+  s_mul_out = sw_raw_mul_output[DATA_BITS:0];
   tmp_dout = (s_mul_out + s_delayed_dout);
-  dout = tmp_dout[11:0] ^ 12'd2048;
+  dout = tmp_dout[DATA_BITS-1:0] ^ HALF_SCALE;
 end
 
 endmodule

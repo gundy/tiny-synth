@@ -4,6 +4,16 @@
 
 This example plays a simple polyphonic song on `PIN_1` using a number of the tiny-synth components.
 
+## Important Note
+
+This demo, probably largely due to a lack of mechanical sympathy on my part,  is very close
+to using all of the logic resources of the TinyFPGA BX.  `arachne-pnr` took almost 30 minutes
+on my machine to place and route.
+
+I've found if I turn off some of the effects like the flanger, things run a lot more quickly.
+
+An opportunity for future enhancement might be to combine the percussion instruments into a single multplexed voice.
+
 ## Before you start
 
 The below circuit (or similar) should be used to filter the output from `PIN_1` before connecting your FPGA to any audio equipment.
@@ -37,7 +47,19 @@ module instrument(
 )
 ```
 
-The two main inputs of interest are tone_frequency and trigger. You can set an instrument to play a particular note, and then trigger it. Easy.
+The two main inputs of interest for the instruments from the point of view of the
+song player are `tone_frequency` and `gate`.
+`tone_frequency` is used to choose the note that's being played, and `gate` is used
+to trigger the instrument.
+
+For the demo song I've created a number of instruments.  
+
+* A "bass", which is a pulse tone that is passed through an exponentially weighted low-pass filter to smooth off some of the shrillness.
+* An "open hi-hat" - a random oscillator with a relatively slow decay envelope
+* A "snare" - another random oscillator with a relatively faster decay, at a lower frequency than the hi-hat.
+* A "kick drum" - two voices - one is a short, sharp burst of noise; the other is a triangle wave for the "thump".
+
+The output from all of these instruments is aggregated and collectively passed through a 1.2Hz flanger to give the sound a "richer" timbre.
 
 ### Bars and rows
 

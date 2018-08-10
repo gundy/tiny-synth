@@ -12,7 +12,6 @@
 `define NUM_CHANNELS (4)
 `define NUM_PATTERNS (10)
 `define SONG_LENGTH (24)
-
 /********************************\
 * BAR                            *
 \********************************/
@@ -54,7 +53,6 @@ endmodule
 
 endmodule
 
-
 /********************************\
 * SONG                           *
 \********************************/
@@ -78,11 +76,13 @@ endmodule
  * main song player routine
  *==============================================================================*/
 
- module song_player (
+ module song_player #(
+   parameter DATA_BITS = 12
+ )(
    input wire main_clk,
    input wire sample_clk,
    input wire tick_clock,
-   output [11:0] audio_out
+   output [DATA_BITS-1:0] audio_out
  );
 
    // convert a 4-bit note (1 = C, ..., 12 = B) into a value
@@ -115,7 +115,7 @@ endmodule
    reg [7:0] song_position;
    reg [7:0] bar_position;
    reg [0:2] tick_timer;
-   wire[11:0] channel_samples[0:3];
+   wire[DATA_BITS-1:0] channel_samples[0:3];
 
    initial
    begin
@@ -124,11 +124,14 @@ endmodule
      tick_timer = 0;     /* each timeslot is split into multiple 'ticks' */
    end
 
-   wire[11:0] intermediate_mix[0:1];
+   wire[DATA_BITS-1:0] intermediate_mix[0:1];
+   wire[DATA_BITS-1:0] final_mix_out;
 
-   two_into_one_mixer mix1(.a(channel_samples[0]), .b(channel_samples[1]), .dout(intermediate_mix[0]));
-   two_into_one_mixer mix2(.a(channel_samples[2]), .b(channel_samples[3]), .dout(intermediate_mix[1]));
-   two_into_one_mixer final_mix(.a(intermediate_mix[0]), .b(intermediate_mix[1]), .dout(audio_out));
+   two_into_one_mixer #(.DATA_BITS(DATA_BITS)) mix1(.a(channel_samples[0]), .b(channel_samples[1]), .dout(intermediate_mix[0]));
+   two_into_one_mixer #(.DATA_BITS(DATA_BITS)) mix2(.a(channel_samples[2]), .b(channel_samples[3]), .dout(intermediate_mix[1]));
+   two_into_one_mixer #(.DATA_BITS(DATA_BITS)) final_mix(.a(intermediate_mix[0]), .b(intermediate_mix[1]), .dout(final_mix_out));
+
+   flanger #(.SAMPLE_BITS(DATA_BITS)) flanger(.sample_clk(sample_clk), .din(final_mix_out), .dout(audio_out));
 
    // look up appropriate pattern based on song position
    wire[7:0] current_pattern_idx;
@@ -165,8 +168,8 @@ endmodule
    // voice 1/channel 1 = bass-riff
    // this instrument is created by taking a pulse wave and passing it through
    // quite a strong low-pass filter to trim off some of the higher harmonics.
-   wire[11:0] bass_out;
-   voice channel1_instrument(
+   wire[DATA_BITS-1:0] bass_out;
+   voice #(.OUTPUT_BITS(DATA_BITS)) channel1_instrument(
      .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[0]), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
@@ -176,10 +179,10 @@ endmodule
      .gate(instrument_gate[0])
    );
 
-   filter_ewma filter(.clk(sample_clk), .s_alpha(10), .din(bass_out), .dout(channel_samples[0]));
+   filter_ewma #(.DATA_BITS(DATA_BITS)) filter(.clk(sample_clk), .s_alpha(10), .din(bass_out), .dout(channel_samples[0]));
 
-   wire[11:0] kd_samples1;
-   wire[11:0] kd_samples2;
+   wire[DATA_BITS-1:0] kd_samples1;
+   wire[DATA_BITS-1:0] kd_samples2;
 
    /* kick drum
     *
@@ -188,7 +191,7 @@ endmodule
     * frequency "thud".
     */
    // voice 2 = kick drum
-   voice channel2_instrument(
+   voice #(.OUTPUT_BITS(DATA_BITS)) channel2_instrument(
      .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[1]), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
@@ -198,7 +201,7 @@ endmodule
      .gate(instrument_gate[1])
    );
    // voice 2, part 2 = kick drum part 2 (noise oscillator)
-   voice channel2b_instrument(
+   voice #(.OUTPUT_BITS(DATA_BITS)) channel2b_instrument(
      .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd18000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
@@ -207,10 +210,10 @@ endmodule
      .attack(4'b0000), .decay(4'b0000), .sustain(4'b1100), .rel(4'b0000),
      .gate(instrument_gate[1])
    );
-   two_into_one_mixer kd_mix(.a(kd_samples1), .b(kd_samples2), .dout(channel_samples[1]));
+   two_into_one_mixer #(.DATA_BITS(DATA_BITS)) kd_mix(.a(kd_samples1), .b(kd_samples2), .dout(channel_samples[1]));
 
    // voice 3 = open high hat
-   voice channel3_instrument(
+   voice  #(.OUTPUT_BITS(DATA_BITS)) channel3_instrument(
      .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd50000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
@@ -221,7 +224,7 @@ endmodule
    );
 
    // voice 4 = "snare" :)
-   voice channel4_instrument(
+   voice #(.OUTPUT_BITS(DATA_BITS)) channel4_instrument(
      .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd2000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
