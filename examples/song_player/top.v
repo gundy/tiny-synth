@@ -65,7 +65,7 @@ module top (
     wire ONE_MHZ_CLK;
     clock_divider #(.DIVISOR(16)) mhz_clk_divider(.cin(CLK), .cout(ONE_MHZ_CLK));
 
-    localparam SAMPLE_BITS = 8;
+    localparam SAMPLE_BITS = 12;
 
     // divide main clock down to 44100Hz for sample output (note this clock will have
     // a bit of jitter because 44.1kHz doesn't go evenly into 16MHz).

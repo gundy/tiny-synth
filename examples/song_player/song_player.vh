@@ -214,7 +214,7 @@ endmodule
 
    // voice 3 = open high hat
    voice  #(.OUTPUT_BITS(DATA_BITS)) channel3_instrument(
-     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd50000), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd43000), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd400),
