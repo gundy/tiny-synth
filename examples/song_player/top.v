@@ -74,7 +74,7 @@ module top (
       .DIVISOR((16000000/44100))
     ) sample_clk_divider(.cin(CLK), .cout(SAMPLE_CLK));
 
-    wire[SAMPLE_BITS-1:0] final_mix;
+    signed wire[SAMPLE_BITS-1:0] final_mix;
     song_player #(.DATA_BITS(SAMPLE_BITS)) player(.main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tick_clock(tick_clock), .audio_out(final_mix));
 
     pdm_dac #(.DATA_BITS(SAMPLE_BITS)) dac1(

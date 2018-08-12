@@ -14,13 +14,13 @@ reg clkin = 0;
 always #0.5 clkin = ~clkin;
 
 wire sq_wave_clk;
-wire [11:0] sq_wave_sig;
+wire signed [11:0] sq_wave_sig;
 
 clock_divider #(.DIVISOR(128)) cdiv_sq(.cin(clkin), .cout(sq_wave_clk));
 
-assign sq_wave_sig = sq_wave_clk ? 12'b1111_1111_1111 : 12'b0000_0000_0000;
+assign sq_wave_sig = sq_wave_clk ? -12'd2048 : 12'd2047;
 
-wire [11:0] filter_out;
+wire signed [11:0] filter_out;
 filter_ewma moving_average_filter(.clk(clkin), .s_alpha($signed(9'd30)), .din(sq_wave_sig), .dout(filter_out));
 
 initial begin

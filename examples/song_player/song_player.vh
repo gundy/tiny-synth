@@ -82,7 +82,7 @@ endmodule
    input wire main_clk,
    input wire sample_clk,
    input wire tick_clock,
-   output [DATA_BITS-1:0] audio_out
+   output signed [DATA_BITS-1:0] audio_out
  );
 
    // convert a 4-bit note (1 = C, ..., 12 = B) into a value
@@ -115,7 +115,7 @@ endmodule
    reg [7:0] song_position;
    reg [7:0] bar_position;
    reg [0:2] tick_timer;
-   wire[DATA_BITS-1:0] channel_samples[0:3];
+   signed wire[DATA_BITS-1:0] channel_samples[0:3];
 
    initial
    begin
@@ -124,12 +124,14 @@ endmodule
      tick_timer = 0;     /* each timeslot is split into multiple 'ticks' */
    end
 
-   wire[DATA_BITS-1:0] intermediate_mix[0:1];
-   wire[DATA_BITS-1:0] final_mix_out;
+   signed wire[DATA_BITS-1:0] intermediate_mix[0:1];
+   signed wire[DATA_BITS-1:0] final_mix_out;
 
-   two_into_one_mixer #(.DATA_BITS(DATA_BITS)) mix1(.a(channel_samples[0]), .b(channel_samples[1]), .dout(intermediate_mix[0]));
-   two_into_one_mixer #(.DATA_BITS(DATA_BITS)) mix2(.a(channel_samples[2]), .b(channel_samples[3]), .dout(intermediate_mix[1]));
-   two_into_one_mixer #(.DATA_BITS(DATA_BITS)) final_mix(.a(intermediate_mix[0]), .b(intermediate_mix[1]), .dout(final_mix_out));
+   multi_channel_mixer #(.DATA_BITS(DATA_BITS), .ACTIVE_CHANNELS(2))
+    mixer(.a(channel_samples[0]), .b(channel_samples[1]), .c(channel_samples[2]), .d(channel_samples[3]),
+          .e(0), .f(0), .g(0), .h(0), .i(0), .j(0), .k(0), .l(0),
+          .dout(final_mix_out)
+      );
 
    flanger #(.SAMPLE_BITS(DATA_BITS)) flanger(.sample_clk(sample_clk), .din(final_mix_out), .dout(audio_out));
 
@@ -168,21 +170,21 @@ endmodule
    // voice 1/channel 1 = bass-riff
    // this instrument is created by taking a pulse wave and passing it through
    // quite a strong low-pass filter to trim off some of the higher harmonics.
-   wire[DATA_BITS-1:0] bass_out;
+   signed wire[DATA_BITS-1:0] bass_out;
    voice #(.OUTPUT_BITS(DATA_BITS)) channel1_instrument(
      .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[0]), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
-     .waveform_enable(4'b0100), .pulse_width(12'd600),
+     .waveform_enable(4'b0110), .pulse_width(12'd2048),
      .dout(bass_out),
-     .attack(4'b0100), .decay(4'b0010), .sustain(4'b1010), .rel(4'b1100),
+     .attack(4'b0100), .decay(4'b0010), .sustain(4'b0100), .rel(4'b1100),
      .gate(instrument_gate[0])
    );
 
-   filter_ewma #(.DATA_BITS(DATA_BITS)) filter(.clk(sample_clk), .s_alpha(10), .din(bass_out), .dout(channel_samples[0]));
+   filter_ewma #(.DATA_BITS(DATA_BITS)) filter(.clk(sample_clk), .s_alpha(20), .din(bass_out), .dout(channel_samples[0]));
 
-   wire[DATA_BITS-1:0] kd_samples1;
-   wire[DATA_BITS-1:0] kd_samples2;
+   signed wire[DATA_BITS-1:0] kd_samples1;
+   signed wire[DATA_BITS-1:0] kd_samples2;
 
    /* kick drum
     *
@@ -192,12 +194,12 @@ endmodule
     */
    // voice 2 = kick drum
    voice #(.OUTPUT_BITS(DATA_BITS)) channel2_instrument(
-     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[1]), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd1383), .rst(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b0001), .pulse_width(12'd1000),
      .dout(kd_samples1),
-     .attack(4'b0001), .decay(4'b0010), .sustain(4'b1111), .rel(4'b0010),
+     .attack(4'b0000), .decay(4'b000), .sustain(4'b1111), .rel(4'b0110),
      .gate(instrument_gate[1])
    );
    // voice 2, part 2 = kick drum part 2 (noise oscillator)
@@ -207,7 +209,7 @@ endmodule
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd1000),
      .dout(kd_samples2),
-     .attack(4'b0000), .decay(4'b0000), .sustain(4'b1100), .rel(4'b0000),
+     .attack(4'b0000), .decay(4'b0000), .sustain(4'b0010), .rel(4'b0000),
      .gate(instrument_gate[1])
    );
    two_into_one_mixer #(.DATA_BITS(DATA_BITS)) kd_mix(.a(kd_samples1), .b(kd_samples2), .dout(channel_samples[1]));
@@ -219,7 +221,7 @@ endmodule
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd400),
      .dout(channel_samples[2]),
-     .attack(4'b0011), .decay(4'b0001), .sustain(4'b1000), .rel(4'b1000),
+     .attack(4'b0011), .decay(4'b0001), .sustain(4'b0100), .rel(4'b1000),
      .gate(instrument_gate[2])
    );
 
@@ -230,7 +232,7 @@ endmodule
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd400),
      .dout(channel_samples[3]),
-     .attack(4'b0010), .decay(4'b0100), .sustain(4'b0011), .rel(4'b0010),
+     .attack(4'b0010), .decay(4'b0010), .sustain(4'b0001), .rel(4'b0100),
      .gate(instrument_gate[3])
    );
 

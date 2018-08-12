@@ -34,7 +34,7 @@ module tone_generator #(
   input main_clk,
   input sample_clk,
   input rst,
-  output wire [OUTPUT_BITS-1:0] dout,
+  output wire signed [OUTPUT_BITS-1:0] dout,
   output wire accumulator_msb,
   output wire accumulator_overflow,
 
@@ -115,7 +115,8 @@ module tone_generator #(
       dout_tmp = dout_tmp & pulse_dout;
   end
 
-  assign dout = dout_tmp;
+  // convert dout value to a signed value
+  assign dout = dout_tmp ^ (2**(OUTPUT_BITS-1));
 
 endmodule
 

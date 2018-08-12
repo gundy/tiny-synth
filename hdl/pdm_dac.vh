@@ -19,15 +19,18 @@
  *  the overflow (output) bit).
  */
 module pdm_dac #(parameter DATA_BITS = 12)(
-  input [DATA_BITS-1:0] din,
+  input signed [DATA_BITS-1:0] din,
   input wire clk,
   output wire dout
 );
 
 reg [DATA_BITS:0] accumulator;
+wire [DATA_BITS-1:0] unsigned_din;
+
+assign unsigned_din = din ^ (2**(DATA_BITS-1));
 
 always @(posedge clk) begin
-  accumulator <= (accumulator[DATA_BITS-1 : 0] + din);
+  accumulator <= (accumulator[DATA_BITS-1 : 0] + unsigned_din);
 end
 
 assign dout = accumulator[DATA_BITS];
