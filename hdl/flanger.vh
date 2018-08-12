@@ -34,8 +34,8 @@
  )
  (
    input wire sample_clk,
-   input wire [SAMPLE_BITS-1:0] din,
-   output reg [SAMPLE_BITS-1:0] dout
+   input wire signed [SAMPLE_BITS-1:0] din,
+   output reg signed [SAMPLE_BITS-1:0] dout
  );
 
  localparam DELAY_BUFFER_LENGTH = 2**DELAY_BUFFER_LENGTH_BITS;
@@ -49,7 +49,7 @@
  reg [ACCUMULATOR_BITS-1:0] accumulator;
  reg [7:0] delay_buffer_write_address;
 
- reg[SAMPLE_BITS-1:0] delay_tap_output;
+ reg signed [SAMPLE_BITS-1:0] delay_tap_output;
  reg[7:0] delay_buffer_read_address;
  wire [DELAY_BUFFER_LENGTH_BITS-1:0] delay_buffer_tap_index;  /* output of triangle oscillator */
  assign delay_buffer_tap_index = (accumulator[ACCUMULATOR_BITS-1]==1'b1)
@@ -82,7 +82,7 @@ end
 localparam ACCUMULATOR_MAX_SCALE = 2**ACCUMULATOR_BITS;
 localparam ACCUMULATOR_PHASE_INCREMENT = $rtoi((ACCUMULATOR_MAX_SCALE * FLANGE_RATE) / 44100);
 
-reg [SAMPLE_BITS:0] tmp;
+reg signed [SAMPLE_BITS:0] tmp;
 
 always @(posedge sample_clk)
 begin
@@ -92,7 +92,7 @@ begin
   accumulator <= accumulator + ACCUMULATOR_PHASE_INCREMENT;
 
   tmp = din + delay_tap_output;
-  dout <= tmp >> 1;
+  dout <= tmp >>> 1;
 end
 
 

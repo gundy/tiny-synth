@@ -28,9 +28,9 @@ module top (
     // drive USB pull-up resistor to '0' to disable USB
     assign USBPU = 0;
 
-    wire [11:0] voice_data_c;
-    wire [11:0] voice_data_e;
-    wire [11:0] voice_data_g;
+    signed wire [11:0] voice_data_c;
+    signed wire [11:0] voice_data_e;
+    signed wire [11:0] voice_data_g;
 
     reg trigger_in;
     SB_IO #(
@@ -81,8 +81,8 @@ module top (
       .gate(!trigger_in)
     );
 
-    wire [11:0] intermediate_mix;
-    wire [11:0] final_mix;
+    signed wire [11:0] intermediate_mix;
+    signed wire [11:0] final_mix;
 
     two_into_one_mixer intermediate_mixer(.a(voice_data_c), .b(voice_data_e), .dout(intermediate_mix));
     two_into_one_mixer final_mixer(.a(intermediate_mix), .b(voice_data_g), .dout(final_mix));
