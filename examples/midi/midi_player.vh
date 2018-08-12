@@ -17,7 +17,7 @@ module midi_player #(
   input wire clk,
   input wire serial_rx,
   output wire serial_tx,
-  output [SAMPLE_BITS-1:0] audio_data
+  output signed [SAMPLE_BITS-1:0] audio_data
 );
 
   reg [7:0] uart_rx_data;
@@ -70,10 +70,10 @@ module midi_player #(
     .DIVISOR((16000000/44100))
   ) sample_clk_divider(.cin(clk), .cout(SAMPLE_CLK));
 
-  reg [SAMPLE_BITS-1:0] raw_voice_out[0:60];
+  reg signed [SAMPLE_BITS-1:0] raw_voice_out[0:60];
   reg instrument_gate[0:127];  /* MIDI gates */
 
-  wire [11:0] raw_combined_voice_out;
+  wire signed [11:0] raw_combined_voice_out;
 
   assign raw_combined_voice_out = raw_voice_out[0]+raw_voice_out[1]+raw_voice_out[2]+raw_voice_out[3]+raw_voice_out[4]+raw_voice_out[5]+raw_voice_out[6]+raw_voice_out[7]+raw_voice_out[8]+raw_voice_out[9]
               + raw_voice_out[10]+raw_voice_out[11]+raw_voice_out[12]+raw_voice_out[13]+raw_voice_out[14]+raw_voice_out[15]+raw_voice_out[16]+raw_voice_out[17]+raw_voice_out[18]+raw_voice_out[19]
@@ -83,7 +83,7 @@ module midi_player #(
               + raw_voice_out[50]+raw_voice_out[51]+raw_voice_out[52]+raw_voice_out[53]+raw_voice_out[54]+raw_voice_out[55]+raw_voice_out[56]+raw_voice_out[57]+raw_voice_out[58]+raw_voice_out[59];
 
   // pass voice output through a low-pass filter, and a flanger to spice it up a little
-  wire[SAMPLE_BITS-1:0] filter_out;
+  wire signed[SAMPLE_BITS-1:0] filter_out;
   filter_ewma #(.DATA_BITS(SAMPLE_BITS)) filter(.clk(SAMPLE_CLK), .s_alpha(10), .din(raw_combined_voice_out), .dout(filter_out));
   flanger #(.SAMPLE_BITS(SAMPLE_BITS)) flanger(.sample_clk(SAMPLE_CLK), .din(filter_out), .dout(audio_data));
 

@@ -28,7 +28,7 @@ module top (
 
     localparam SAMPLE_BITS = 12;
 
-    wire[SAMPLE_BITS-1:0] final_mix;
+    wire signed [SAMPLE_BITS-1:0] final_mix;
     midi_player #(.SAMPLE_BITS(SAMPLE_BITS)) midi_player(.clk(CLK), .serial_rx(serial_rx), .serial_tx(PIN_12), .audio_data(final_mix));
 
     pdm_dac #(.DATA_BITS(SAMPLE_BITS)) dac1(
