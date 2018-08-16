@@ -42,7 +42,7 @@
 
  	input         reg_dat_we,
  	input  [7:0]  reg_dat_di,
- 	output        reg_dat_wait);
+ 	output        tx_busy);
 
  localparam cfg_divider = $rtoi(CLOCK_FREQUENCY / BAUD_RATE);
 
@@ -75,11 +75,12 @@
  	reg [7:0] recv_buf_data;  /* previously received byte */
  	reg recv_buf_valid;       /* flag to indicate that the buffered receive byte is valid, and can be clocked out with reg_dat_re */
 
+
   /* data out line is either data from the buffer (if the data is available and valid),
    *  or it's 0xff otherwise.
    */
  	assign reg_dat_do = recv_buf_valid ? recv_buf_data : ~0;
-
+  assign tx_busy = reg_dat_we && (send_bitcnt || send_dummy);
 
   /* ===================================================================================================================== */
 
@@ -95,7 +96,7 @@
    *  the serial line is busy because it's either currently sending data
    *  (send_bitcnt is non-zero) or is about to send a dummy slot (send_dummy is 1).
    */
- 	assign reg_dat_wait = reg_dat_we && (send_bitcnt || send_dummy);
+ 	assign tx_busy = reg_dat_we && (send_bitcnt || send_dummy);
 
  	always @(posedge clk) begin
  		if (!resetn) begin
@@ -122,22 +123,30 @@
  				end
  				1: begin
           /* state 1 means we're waiting for the middle of the start bit. */
- 					if (2*recv_divcnt > cfg_divider) begin
-            /* at this point we've aligned ourselves half-way
-             * through the start-bit (notice the 2x multiplier above),
-             * so we reset the counter to zero, and wait for the next
-             * full bit-cycles so we can sample the incoming bits.
-             */
- 						recv_state <= 2;
- 						recv_divcnt <= 0;
- 					end
+          if (ser_rx) begin
+            // we had a false start bit; reset and try again
+            recv_state <= 0;
+          end else begin
+   					if (2*recv_divcnt > cfg_divider) begin
+              /* at this point we've aligned ourselves half-way
+               * through the start-bit (notice the 2x multiplier above),
+               * so we reset the counter to zero, and wait for the next
+               * full-bit cycle(s) so we can sample the middle of the incoming bits.
+               */
+   						recv_state <= 2;
+   						recv_divcnt <= 0;
+   					end
+          end
  				end
  				10: begin
  					if (recv_divcnt > cfg_divider) begin
             /* at this point we're in the middle of receiving the
              * stop bit, and rather than doing anything with it, we
              * use this as an opportunity to clock out the newly
-             * received byte by setting the recv_buf_valid flag.
+             * received byte by setting the recv_buf_valid flag,
+             * and then bounce back to state 0.  (note: stop-bit is
+             * logic-level high, so we're ready to look for the next
+             * high-low transition to signal the next bit).
              */
  						recv_buf_data <= recv_pattern;
  						recv_buf_valid <= 1;
@@ -161,7 +170,7 @@
  * ====================================================================
  */
 
-  // bit zero of zend_pattern is always what's being clocked out next
+  // clock out bit zero of send_pattern
  	assign ser_tx = send_pattern[0];
 
  	always @(posedge clk) begin
@@ -196,7 +205,7 @@
          * we're ready for the next bit, so rotate send_pattern one
          * bit to the right (and fill MSB with a 1).  Also
          * decrement the number of bits left to send, and
-         * resetting the counter.
+         * reset the counter.
          */
  				send_pattern <= {1'b1, send_pattern[9:1]};
  				send_bitcnt <= send_bitcnt - 1;

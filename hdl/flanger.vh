@@ -29,7 +29,7 @@
   parameter DELAY_BUFFER_LENGTH_BITS = 8,  /* = 8-bits = 256 long = 5.6 milliseconds @ 44.1kHz */
   parameter SAMPLE_BITS = 12,
   parameter SAMPLE_RATE = 44100, /* Hz */
-  parameter FLANGE_RATE = 1.2,   /* Hz */
+  parameter FLANGE_RATE = 1.4,   /* Hz */
   parameter ACCUMULATOR_BITS = 21
  )
  (

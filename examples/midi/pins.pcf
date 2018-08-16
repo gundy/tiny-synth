@@ -49,12 +49,12 @@ set_io --warn-no-port PIN_1 A2
 #set_io --warn-no-port PIN_9 E1
 #set_io --warn-no-port PIN_10 G2
 #set_io --warn-no-port PIN_11 H1
-set_io --warn-no-port PIN_12 J1
-set_io --warn-no-port PIN_13 H2
+#set_io --warn-no-port PIN_12 J1
+#set_io --warn-no-port PIN_13 H2
 
 # Right side of board
-#set_io --warn-no-port PIN_14 H9
-#set_io --warn-no-port PIN_15 D9
+set_io --warn-no-port PIN_14 H9
+set_io --warn-no-port PIN_15 D9
 #set_io --warn-no-port PIN_16 D8
 #set_io --warn-no-port PIN_17 C9
 #set_io --warn-no-port PIN_18 A9
@@ -83,7 +83,7 @@ set_io --warn-no-port PIN_13 H2
 #set_io --warn-no-port PIN_31 J2
 
 # LED
-set_io --warn-no-port LED B3
+#set_io --warn-no-port LED B3
 
 # USB
 #set_io --warn-no-port USBP B4

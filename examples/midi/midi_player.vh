@@ -1,15 +1,17 @@
 `ifndef __TINY_SYNTH_MIDI_PLAYER__
 `define __TINY_SYNTH_MIDI_PLAYER__
 
-`include "simpleuart.vh"
-`include "midi_framer.vh"
-`include "midi_note_lookup.vh"
+/* Using some slimmed-down versions of the voice code
+   so that we can fit more voices in the budget */
+`include "tone_generator_fixed_param.vh"
+`include "envelope_generator_fixed_param.vh"
+`include "voice_fixed_param.vh"
 
-/*
- * This is a _very_ simple MIDI player.
- *
- * It only has single-note polyphony
- */
+/* Clifford Wolf's simpleuart */
+`include "simpleuart.vh"
+
+/* .. and a wrapper for it that handles framing incoming messages into MIDI commands */
+`include "midi_uart.vh"
 
 module midi_player #(
   parameter SAMPLE_BITS = 12
@@ -20,132 +22,199 @@ module midi_player #(
   output signed [SAMPLE_BITS-1:0] audio_data
 );
 
-  reg [7:0] uart_rx_data;
-  reg uart_read_ack;
-  wire uart_recv_data_valid;
-
-  reg uart_tx_wait;  /* not used */
-
   /* incoming midi data */
   reg [7:0] midi_uart_data;
   reg midi_byte_clk;
   reg midi_event_valid;
-  reg [7:0] midi_command;
-  reg [7:0] midi_parameter_1;
-  reg [7:0] midi_parameter_2;
+  wire [7:0] midi_command;
+  wire [6:0] midi_parameter_1;
+  wire [6:0] midi_parameter_2;
+  wire midi_event_ack;
 
-  wire midi_data_ack;
-
-  simpleuart #(.CLOCK_FREQUENCY(16000000), .BAUD_RATE(31250)) uart(
-    .clk(clk), .resetn(1'b1),
-    .ser_rx(serial_rx),
-    .reg_dat_re(uart_read_ack),
-    .reg_dat_do(uart_rx_data),
-    .recv_buf_valid(uart_recv_data_valid),
-
-    /* we never write to the UART */
-    .ser_tx(serial_tx),
-    .reg_dat_we(1'b0),
-    .reg_dat_di(8'd0),
-    .reg_dat_wait(uart_tx_wait)
-  );
-
-  midi_framer framer(
-    .din(midi_uart_data), .din_clk(midi_byte_clk),  /* clock data into framer based on uart data valid signal */
+  midi_uart midi_uart(
+    .clk(clk),
+    .serial_rx(serial_rx), .serial_tx(serial_tx),
     .midi_event_valid(midi_event_valid),
     .midi_command(midi_command),
     .midi_parameter_1(midi_parameter_1),
     .midi_parameter_2(midi_parameter_2),
-    .midi_data_ack(midi_data_ack)
+    .midi_event_ack(midi_event_ack)
   );
 
   /* CLOCK GENERATION; generate 1MHz clock for voice oscillators, and 44100Hz clock for sample output */
   wire ONE_MHZ_CLK;
   clock_divider #(.DIVISOR(16)) mhz_clk_divider(.cin(clk), .cout(ONE_MHZ_CLK));
 
+  localparam SAMPLE_CLK_FREQ = 44100;
+
   // divide main clock down to 44100Hz for sample output (note this clock will have
   // a bit of jitter because 44.1kHz doesn't go evenly into 16MHz).
   wire SAMPLE_CLK;
   clock_divider #(
-    .DIVISOR((16000000/44100))
+    .DIVISOR((16000000/SAMPLE_CLK_FREQ))
   ) sample_clk_divider(.cin(clk), .cout(SAMPLE_CLK));
 
-  reg signed [SAMPLE_BITS-1:0] raw_voice_out[0:60];
-  reg instrument_gate[0:127];  /* MIDI gates */
+  // number of voices to use
+  // if you modify this, you'll also need to manually update the
+  // mixing function below
+  localparam NUM_VOICES = 8;
 
-  wire signed [11:0] raw_combined_voice_out;
+  // individual voices are mixed into here..
+  // output is wider than a single voice, and gets "clamped" (or "saturated") into clamped_voice_out.
+  reg signed [SAMPLE_BITS+$clog2(NUM_VOICES)-1:0] raw_combined_voice_out;
+  wire signed [SAMPLE_BITS-1:0] clamped_voice_out;
 
-  assign raw_combined_voice_out = raw_voice_out[0]+raw_voice_out[1]+raw_voice_out[2]+raw_voice_out[3]+raw_voice_out[4]+raw_voice_out[5]+raw_voice_out[6]+raw_voice_out[7]+raw_voice_out[8]+raw_voice_out[9]
-              + raw_voice_out[10]+raw_voice_out[11]+raw_voice_out[12]+raw_voice_out[13]+raw_voice_out[14]+raw_voice_out[15]+raw_voice_out[16]+raw_voice_out[17]+raw_voice_out[18]+raw_voice_out[19]
-              + raw_voice_out[20]+raw_voice_out[21]+raw_voice_out[22]+raw_voice_out[23]+raw_voice_out[24]+raw_voice_out[25]+raw_voice_out[26]+raw_voice_out[27]+raw_voice_out[28]+raw_voice_out[29]
-              + raw_voice_out[30]+raw_voice_out[31]+raw_voice_out[32]+raw_voice_out[33]+raw_voice_out[34]+raw_voice_out[35]+raw_voice_out[36]+raw_voice_out[37]+raw_voice_out[38]+raw_voice_out[39]
-              + raw_voice_out[40]+raw_voice_out[41]+raw_voice_out[42]+raw_voice_out[43]+raw_voice_out[44]+raw_voice_out[45]+raw_voice_out[46]+raw_voice_out[47]+raw_voice_out[48]+raw_voice_out[49]
-              + raw_voice_out[50]+raw_voice_out[51]+raw_voice_out[52]+raw_voice_out[53]+raw_voice_out[54]+raw_voice_out[55]+raw_voice_out[56]+raw_voice_out[57]+raw_voice_out[58]+raw_voice_out[59];
+  localparam signed MAX_SAMPLE_VALUE = (2**(SAMPLE_BITS-1))-1;
+  localparam signed MIN_SAMPLE_VALUE = -(2**(SAMPLE_BITS-1));
+
+  assign  clamped_voice_out = (raw_combined_voice_out > MAX_SAMPLE_VALUE)
+                            ? MAX_SAMPLE_VALUE
+                            : ((raw_combined_voice_out < MIN_SAMPLE_VALUE)
+                              ? MIN_SAMPLE_VALUE
+                              : raw_combined_voice_out[SAMPLE_BITS-1:0]);
+
+
+  reg [NUM_VOICES-1:0] voice_gate;  /* MIDI gates */
+  reg [NUM_VOICES-1:0] voice_idle;  /* is this voice idle / ready to accept a new note? */
+  reg [15:0] voice_frequency[0:NUM_VOICES-1];  /* frequency of the voice */
+  reg [6:0] voice_note[0:NUM_VOICES-1];        /* midi note that is playing on this voice */
+  wire signed[SAMPLE_BITS-1:0] voice_samples[0:NUM_VOICES-1];  // samples for each voice
+
+  // MIXER: this adds the output from the 8 voices together
+  always @(posedge SAMPLE_CLK) begin
+    raw_combined_voice_out <= (voice_samples[0]+voice_samples[1]+voice_samples[2]+voice_samples[3]
+                                +voice_samples[4]+voice_samples[5]+voice_samples[6]+voice_samples[7])>>>2;
+  end
+
 
   // pass voice output through a low-pass filter, and a flanger to spice it up a little
   wire signed[SAMPLE_BITS-1:0] filter_out;
-  filter_ewma #(.DATA_BITS(SAMPLE_BITS)) filter(.clk(SAMPLE_CLK), .s_alpha(10), .din(raw_combined_voice_out), .dout(filter_out));
-  flanger #(.SAMPLE_BITS(SAMPLE_BITS)) flanger(.sample_clk(SAMPLE_CLK), .din(filter_out), .dout(audio_data));
 
-  genvar i;
+ filter_ewma #(.DATA_BITS(SAMPLE_BITS)) filter(.clk(SAMPLE_CLK), .s_alpha(25), .din(clamped_voice_out), .dout(filter_out));
+ flanger #(.SAMPLE_BITS(SAMPLE_BITS)) flanger(.sample_clk(SAMPLE_CLK), .din(filter_out), .dout(audio_data));
+
+ localparam WAVE_NOISE=4;
+ localparam WAVE_PULSE=3;
+ localparam WAVE_SAW=2;
+ localparam WAVE_TRIANGLE=1;
+
+  localparam WAVEFORM=WAVE_SAW;
+  localparam [7:0] SUSTAIN_VOLUME=128;
+
+  localparam ACCUMULATOR_BITS = 26;
+  localparam  ACCUMULATOR_SIZE = 2**ACCUMULATOR_BITS;
+  localparam  ACCUMULATOR_MAX  = ACCUMULATOR_SIZE-1;
+
+
+  `define CALCULATE_PHASE_INCREMENT(n) $rtoi(ACCUMULATOR_SIZE / ($itor(n) * SAMPLE_CLK_FREQ))
+
+  localparam ATTACK_INC =  `CALCULATE_PHASE_INCREMENT(0.038);
+  localparam DECAY_INC =  `CALCULATE_PHASE_INCREMENT(0.038);
+  localparam RELEASE_INC =  `CALCULATE_PHASE_INCREMENT(0.8);
+
+
   generate
-      /* generate some voices and wire them to the per-MIDI-note gates */
-      for (i=24; i<=72; i=i+1) begin : voices
-        voice #(.OUTPUT_BITS(SAMPLE_BITS)) instrument_voice(
-          .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq($rtoi((2 ** ((i-84)/12)) * 17557.0)), .rst(1'b0),
-          .en_ringmod(1'b0), .ringmod_source(1'b0),
-          .en_sync(1'b0), .sync_source(1'b0),
-          .waveform_enable(4'b0100), .pulse_width(12'd600),
-          .attack(4'b0100), .decay(4'b1100), .sustain(4'b0000), .rel(4'b1100),
-          .dout(raw_voice_out[i-24]),
-          .gate(instrument_gate[i])
-        );
-      end
+    genvar i;
+    /* generate some voices and wire them to the per-MIDI-note gates */
+    for (i=0; i<NUM_VOICES; i=i+1)
+    begin : voices
+      voice_fixed_param #(
+        .OUTPUT_BITS(SAMPLE_BITS),
+        .WAVEFORM(WAVEFORM),
+        .ATTACK_INC(ATTACK_INC), .DECAY_INC(DECAY_INC), .SUSTAIN_VOLUME(SUSTAIN_VOLUME), .RELEASE_INC(RELEASE_INC)
+      ) voice (
+        .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(voice_frequency[i]), .rst(1'b0),
+        .en_ringmod(1'b0), .ringmod_source(1'b0),
+        .en_sync(1'b0), .sync_source(1'b0),
+        .pulse_width(12'd600),
+        .dout(voice_samples[i]),
+        .is_idle(voice_idle[i]),
+        .gate(voice_gate[i])
+      );
+    end
   endgenerate
 
-  /* handle read and acknowledgement of UART data, and clocking it in to the MIDI framer */
-  always @(posedge clk)
-  begin
-    if (uart_recv_data_valid)
-    begin
-      uart_read_ack <= 1'b1;
-      midi_uart_data <= uart_rx_data;
-      midi_byte_clk <= 1'b1;
-    end
-    else
-    begin
-      uart_read_ack <= 1'b0;
-      midi_byte_clk <= 1'b0;
-    end
-  end
+  `include "midi_note_to_tone_freq.vh"
 
-  /* handle output from MIDI framer */
-  always @(posedge clk)
-  begin
-    if (midi_event_valid)
-    begin
+
+  integer voice_idx;
+  wire [15:0] tone_freq;
+  assign tone_freq = midi_note_to_tone_freq(midi_parameter_1);
+
+  /* handle read and acknowledgement of UART data, and clocking it in to the MIDI framer */
+  always @(posedge clk) begin : midi_note_processor
+    if (midi_event_valid && !midi_event_ack) begin
+      // acknowledge the incoming MIDI event (this will automatically clear the _event_valid flag)
+      midi_event_ack <= 1'b1;
+
       case (midi_command[7:4])
-        /***************************\
-        *  note off                 *
-        \***************************/
-        4'h8:
-        begin
-          instrument_gate[midi_parameter_1[6:0]] <= 1'b0;
-        end
-        /***************************\
-        *  note on                  *
-        \***************************/
-        4'h9:
-        begin
-          instrument_gate[midi_parameter_1[6:0]] <= 1'b1;
-        end
+        // note on ; find an idle voice and assign this note to it (and gate it on)
+        // the long chain below is because yosys doesn't support the "disable" statement.
+        4'h9: begin
+                if (!(
+                    voice_note[0] == midi_parameter_1
+                    || voice_note[1] == midi_parameter_1
+                    || voice_note[2] == midi_parameter_1
+                    || voice_note[3] == midi_parameter_1
+                    || voice_note[4] == midi_parameter_1
+                    || voice_note[5] == midi_parameter_1
+                    || voice_note[6] == midi_parameter_1
+                    || voice_note[7] == midi_parameter_1
+                  )) begin
+                    if (voice_idle[0]) begin
+                      voice_note[0] <= midi_parameter_1;
+                      voice_frequency[0] <= tone_freq;
+                      voice_gate[0] <= 1'b1;
+                    end else if (voice_idle[1]) begin
+                      voice_note[1] <= midi_parameter_1;
+                      voice_frequency[1] <= tone_freq;
+                      voice_gate[1] <= 1'b1;
+                    end else if (voice_idle[2]) begin
+                      voice_note[2] <= midi_parameter_1;
+                      voice_frequency[2] <= tone_freq;
+                      voice_gate[2] <= 1'b1;
+                    end else if (voice_idle[2]) begin
+                      voice_note[2] <= midi_parameter_1;
+                      voice_frequency[2] <= tone_freq;
+                      voice_gate[2] <= 1'b1;
+                    end else if (voice_idle[3]) begin
+                      voice_note[3] <= midi_parameter_1;
+                      voice_frequency[3] <= tone_freq;
+                      voice_gate[3] <= 1'b1;
+                    end else if (voice_idle[4]) begin
+                      voice_note[4] <= midi_parameter_1;
+                      voice_frequency[4] <= tone_freq;
+                      voice_gate[4] <= 1'b1;
+                    end else if (voice_idle[5]) begin
+                      voice_note[5] <= midi_parameter_1;
+                      voice_frequency[5] <= tone_freq;
+                      voice_gate[5] <= 1'b1;
+                    end else if (voice_idle[6]) begin
+                      voice_note[6] <= midi_parameter_1;
+                      voice_frequency[6] <= tone_freq;
+                      voice_gate[6] <= 1'b1;
+                    end else if (voice_idle[7]) begin
+                      voice_note[7] <= midi_parameter_1;
+                      voice_frequency[7] <= tone_freq;
+                      voice_gate[7] <= 1'b1;
+                    end
+                  end
+              end
+        // note off ; find the voice playing this note, and gate it off.
+        4'h8: begin
+                for (voice_idx = 0; voice_idx < NUM_VOICES; voice_idx = voice_idx + 1) begin
+                  if (voice_note[voice_idx] == midi_parameter_1) begin
+                    voice_note[voice_idx] <= 0;
+                    voice_gate[voice_idx] <= 1'b0;
+                  end
+                end
+              end
       endcase
-      midi_data_ack <= 1;
+    end else begin
+      // no event to acknowledge, so clear ack flag
+      midi_event_ack <= 1'b0;
     end
-    else
-    begin
-      midi_data_ack <= 0;
-    end
+
   end
 
 endmodule
