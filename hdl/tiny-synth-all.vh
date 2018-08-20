@@ -20,5 +20,6 @@
 `include "voice.vh"
 `include "flanger.vh"
 `include "filter_ewma.vh"
+`include "filter_svf.vh"
 
 `endif
