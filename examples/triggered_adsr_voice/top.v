@@ -89,7 +89,7 @@ module top (
 
     pdm_dac #(.DATA_BITS(12)) dac1(
       .din(final_mix),
-      .clk(main_clk),
+      .clk(CLK),
       .dout(PIN_1)
     );
 
