@@ -53,8 +53,8 @@ set_io --warn-no-port PIN_1 34
 #set_io --warn-no-port PIN_13 H2
 
 # Right side of board
-#set_io --warn-no-port PIN_14 H9
-#set_io --warn-no-port PIN_15 D9
+set_io --warn-no-port PIN_14 20
+set_io --warn-no-port PIN_15 19
 #set_io --warn-no-port PIN_16 D8
 #set_io --warn-no-port PIN_17 C9
 #set_io --warn-no-port PIN_18 A9
