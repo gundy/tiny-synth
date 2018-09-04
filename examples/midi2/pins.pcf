@@ -38,7 +38,7 @@
 ####
 
 # Left side of board
-set_io --warn-no-port PIN_1 34
+set_io --warn-no-port PIN_1 A2
 #set_io --warn-no-port PIN_2 A1
 #set_io --warn-no-port PIN_3 B1
 #set_io --warn-no-port PIN_4 C2
@@ -53,8 +53,8 @@ set_io --warn-no-port PIN_1 34
 #set_io --warn-no-port PIN_13 H2
 
 # Right side of board
-set_io --warn-no-port PIN_14 20
-set_io --warn-no-port PIN_15 19
+set_io --warn-no-port PIN_14 H9
+set_io --warn-no-port PIN_15 D9
 #set_io --warn-no-port PIN_16 D8
 #set_io --warn-no-port PIN_17 C9
 #set_io --warn-no-port PIN_18 A9
@@ -83,18 +83,18 @@ set_io --warn-no-port PIN_15 19
 #set_io --warn-no-port PIN_31 J2
 
 # LED
-set_io --warn-no-port LED 71
+#set_io --warn-no-port LED B3
 
 # USB
 #set_io --warn-no-port USBP B4
 #set_io --warn-no-port USBN A4
-set_io --warn-no-port USBPU 33
+set_io --warn-no-port USBPU A3
 
 # 16MHz clock
-set_io --warn-no-port CLK_100 129 # input
+set_io --warn-no-port CLK B2 # input
 
-set_io SWITCHES[0] 37
-set_io SWITCHES[1] 38
-set_io SWITCHES[2] 39
-set_io SWITCHES[3] 41
+set_io SWITCHES[0] D8
+set_io SWITCHES[1] C9
+set_io SWITCHES[2] A9
+set_io SWITCHES[3] B8
 
