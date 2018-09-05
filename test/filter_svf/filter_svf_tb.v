@@ -41,7 +41,7 @@ filter_svf state_variable_filter(
   .out_lowpass(low_pass_out),
   .out_bandpass(band_pass_out),
   .out_notch(notch_pass_out)
-  );
+);
 
 initial begin
 
