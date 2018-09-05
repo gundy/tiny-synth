@@ -14,6 +14,7 @@ module top (
     input CLK,    // 16MHz clock
 `endif
     output USBPU,  // USB pull-up resistor
+    input [3:0] SWITCHES,
     input PIN_14,  // serial (MIDI) data in
     output PIN_15, // serial (MIDI) data out
     output PIN_1);  /* audio out */
@@ -38,7 +39,7 @@ module top (
     localparam SAMPLE_BITS = 12;
 
     wire signed [SAMPLE_BITS-1:0] final_mix;
-    midi_player #(.SAMPLE_BITS(SAMPLE_BITS)) midi_player(.clk(CLK), .serial_rx(serial_rx), .serial_tx(PIN_15), .audio_data(final_mix));
+    midi_player #(.SAMPLE_BITS(SAMPLE_BITS)) midi_player(.clk(CLK), .serial_rx(serial_rx), .serial_tx(PIN_15), .audio_data(final_mix), .waveform(SWITCHES));
 
     pdm_dac #(.DATA_BITS(SAMPLE_BITS)) dac1(
       .din(final_mix),

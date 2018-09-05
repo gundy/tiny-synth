@@ -20,9 +20,18 @@
 
 // look in pins.pcf for all the pin names on the TinyFPGA BX board
 module top (
+`ifdef blackice
+    input CLK_100,    // 100MHz clock
+`else
     input CLK,    // 16MHz clock
+`endif
     output USBPU,  // USB pull-up resistor
     output PIN_1);
+
+`ifdef blackice
+    wire CLK;
+    pll pll0 (.clock_in(CLK_100), .clock_out(CLK));
+`endif
 
     // drive USB pull-up resistor to '0' to disable USB
     assign USBPU = 0;
