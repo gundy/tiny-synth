@@ -52,7 +52,7 @@ module top (
     // tone_freq is calculated by (16777216 * freq) / 1000000
     // so, for 261.63Hz (Middle C), tone_freq needs to be 4389.
     voice voice_c(
-      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd4389) /* C4, 261.63Hz */, .rst(1'b0),
+      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd4389) /* C4, 261.63Hz */, .rst(1'b0), .test(1'b0),
       .en_ringmod(1'b0), .ringmod_source(1'b0),
       .en_sync(1'b0), .sync_source(1'b0),
       .waveform_enable(4'b0001), .pulse_width(12'd2047),
@@ -62,7 +62,7 @@ module top (
     );
 
     voice voice_e(
-      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd5530) /* E4, 329.63Hz */, .rst(1'b0),
+      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd5530) /* E4, 329.63Hz */, .rst(1'b0), .test(1'b0),
       .en_ringmod(1'b0), .ringmod_source(1'b0),
       .en_sync(1'b0), .sync_source(1'b0),
       .waveform_enable(4'b0001), .pulse_width(12'd2047),
@@ -72,7 +72,7 @@ module top (
     );
 
     voice voice_g(
-      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd6577) /* G4, 392.00Hz */, .rst(1'b0),
+      .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(16'd6577) /* G4, 392.00Hz */, .rst(1'b0), .test(1'b0),
       .en_ringmod(1'b0), .ringmod_source(1'b0),
       .en_sync(1'b0), .sync_source(1'b0),
       .waveform_enable(4'b0001), .pulse_width(12'd2047),

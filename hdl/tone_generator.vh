@@ -34,9 +34,10 @@ module tone_generator #(
   input main_clk,
   input sample_clk,
   input rst,
+  input test,
   output wire signed [OUTPUT_BITS-1:0] dout,
   output wire accumulator_msb,
-  output wire accumulator_overflow,
+  output wire sync_trigger_out,
 
   input wire en_ringmod,
   input wire ringmod_source,
@@ -49,19 +50,20 @@ module tone_generator #(
   input en_triangle,
   input en_saw);
 
-  reg [ACCUMULATOR_BITS:0] accumulator;
+  reg [ACCUMULATOR_BITS-1:0] accumulator;
+  reg [ACCUMULATOR_BITS-1:0] prev_accumulator;
 
   wire [OUTPUT_BITS-1:0] noise_dout;
   tone_generator_noise #(
     .OUTPUT_BITS(OUTPUT_BITS)
-  ) noise(.clk(accumulator[18]), .rst(rst), .dout(noise_dout));
+  ) noise(.clk(accumulator[19]), .rst(rst || test), .dout(noise_dout));
 
   wire [OUTPUT_BITS-1:0] triangle_dout;
   tone_generator_triangle #(
       .ACCUMULATOR_BITS(ACCUMULATOR_BITS),
       .OUTPUT_BITS(OUTPUT_BITS)
   ) triangle_generator (
-      .accumulator(accumulator[ACCUMULATOR_BITS-1:0]),
+      .accumulator(accumulator),
       .dout(triangle_dout),
       .en_ringmod(en_ringmod),
       .ringmod_source(ringmod_source)
@@ -72,7 +74,7 @@ module tone_generator #(
       .ACCUMULATOR_BITS(ACCUMULATOR_BITS),
       .OUTPUT_BITS(OUTPUT_BITS)
     ) saw(
-      .accumulator(accumulator[ACCUMULATOR_BITS-1:0]),
+      .accumulator(accumulator),
       .dout(saw_dout)
     );
 
@@ -82,7 +84,7 @@ module tone_generator #(
       .OUTPUT_BITS(OUTPUT_BITS),
       .PULSEWIDTH_BITS(PULSEWIDTH_BITS)
     ) pulse(
-      .accumulator(accumulator[ACCUMULATOR_BITS-1:0]),
+      .accumulator(accumulator),
       .dout(pulse_dout),
       .pulse_width(pulse_width)
     );
@@ -90,17 +92,26 @@ module tone_generator #(
   reg [OUTPUT_BITS-1:0] dout_tmp;
 
   always @(posedge main_clk) begin
-    if (en_sync && sync_source)
+    if ((en_sync && sync_source) || test)
       begin
+        prev_accumulator <= 0;
         accumulator <= 0;
       end
     else
       begin
-        accumulator <= accumulator[ACCUMULATOR_BITS-1:0] + tone_freq;
+        prev_accumulator <= accumulator;
+        accumulator <= accumulator + tone_freq;
       end
   end
 
-  assign accumulator_overflow = (accumulator[ACCUMULATOR_BITS]);  /* used for syncing to other oscillators */
+  // ref ReSID:
+  // msb_rising = !(accumulator_prev & 0x800000) && (accumulator & 0x800000);
+  // if (msb_rising && sync_dest->sync && !(sync && sync_source->msb_rising)) {
+  //   sync_dest->accumulator = 0;
+  // }
+  assign sync_trigger_out = (!(prev_accumulator & 24'h800000) && (accumulator & 24'h800000));
+                        //&& (!(en_sync && sync_source));
+
   assign accumulator_msb = accumulator[ACCUMULATOR_BITS-1];
 
   always @(posedge sample_clk) begin

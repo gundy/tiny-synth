@@ -172,7 +172,7 @@ endmodule
    // quite a strong low-pass filter to trim off some of the higher harmonics.
    signed wire[DATA_BITS-1:0] bass_out;
    voice #(.OUTPUT_BITS(DATA_BITS)) channel1_instrument(
-     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[0]), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(instrument_frequency[0]), .rst(1'b0), .test(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b0110), .pulse_width(12'd2048),
@@ -194,7 +194,7 @@ endmodule
     */
    // voice 2 = kick drum
    voice #(.OUTPUT_BITS(DATA_BITS)) channel2_instrument(
-     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd1383), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd1383), .rst(1'b0), .test(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b0001), .pulse_width(12'd1000),
@@ -204,7 +204,7 @@ endmodule
    );
    // voice 2, part 2 = kick drum part 2 (noise oscillator)
    voice #(.OUTPUT_BITS(DATA_BITS)) channel2b_instrument(
-     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd18000), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd18000), .rst(1'b0), .test(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd1000),
@@ -216,7 +216,7 @@ endmodule
 
    // voice 3 = open high hat
    voice  #(.OUTPUT_BITS(DATA_BITS)) channel3_instrument(
-     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd43000), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd43000), .rst(1'b0), .test(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd400),
@@ -227,7 +227,7 @@ endmodule
 
    // voice 4 = "snare" :)
    voice #(.OUTPUT_BITS(DATA_BITS)) channel4_instrument(
-     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd2000), .rst(1'b0),
+     .main_clk(main_clk), .sample_clk(sample_clk), .tone_freq(16'd2000), .rst(1'b0), .test(1'b0),
      .en_ringmod(1'b0), .ringmod_source(1'b0),
      .en_sync(1'b0), .sync_source(1'b0),
      .waveform_enable(4'b1000), .pulse_width(12'd400),

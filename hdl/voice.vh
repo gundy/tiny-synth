@@ -18,9 +18,10 @@ module voice #(
   input main_clk,
   input sample_clk,
   input rst,
+  input test,
   output wire signed [OUTPUT_BITS-1:0] dout,
   output wire accumulator_msb,   /* used to feed ringmod on another voice */
-  output wire accumulator_overflow,  /* set when accumulator = 0; used to sync with another oscillator */
+  output wire sync_trigger_out,  /* used to sync with another oscillator */
   input en_ringmod,
   input wire ringmod_source,
   input en_sync,
@@ -52,9 +53,10 @@ module voice #(
       .main_clk(main_clk),
       .sample_clk(sample_clk),
       .rst(rst),
+      .test(test),
       .dout(tone_generator_data),
       .accumulator_msb(accumulator_msb),
-      .accumulator_overflow(accumulator_overflow),
+      .sync_trigger_out(sync_trigger_out),
       .en_sync(en_sync),
       .sync_source(sync_source),
       .en_ringmod(en_ringmod),
