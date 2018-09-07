@@ -4,6 +4,7 @@
 /* Using some slimmed-down versions of the voice code
    so that we can fit more voices in the budget */
 `include "../../hdl/tiny-synth-all.vh"
+`include "filter_tables.vh"
 
 /* Clifford Wolf's simpleuart */
 `include "simpleuart.vh"
@@ -43,7 +44,7 @@ module midi_player #(
   wire ONE_MHZ_CLK;
   clock_divider #(.DIVISOR(16)) mhz_clk_divider(.cin(clk), .cout(ONE_MHZ_CLK));
 
-  localparam SAMPLE_CLK_FREQ = 44100;
+  localparam SAMPLE_CLK_FREQ = 250000;
 
   // divide main clock down to 44100Hz for sample output (note this clock will have
   // a bit of jitter because 44.1kHz doesn't go evenly into 16MHz).
@@ -55,12 +56,16 @@ module midi_player #(
   // number of voices to use
   // if you modify this, you'll also need to manually update the
   // mixing function below
-  localparam NUM_VOICES = 8;
+  localparam NUM_VOICES = 4;
 
   // individual voices are mixed into here..
   // output is wider than a single voice, and gets "clamped" (or "saturated") into clamped_voice_out.
   reg signed [SAMPLE_BITS+$clog2(NUM_VOICES)-1:0] raw_combined_voice_out;
   wire signed [SAMPLE_BITS-1:0] clamped_voice_out;
+  wire signed [SAMPLE_BITS-1:0] out_lp;
+  wire signed [SAMPLE_BITS-1:0] out_hp;
+  wire signed [SAMPLE_BITS-1:0] out_bp;
+  wire signed [SAMPLE_BITS-1:0] out_notch;
 
   localparam signed MAX_SAMPLE_VALUE = (2**(SAMPLE_BITS-1))-1;
   localparam signed MIN_SAMPLE_VALUE = -(2**(SAMPLE_BITS-1));
@@ -73,25 +78,58 @@ module midi_player #(
 
 
   reg [NUM_VOICES-1:0] voice_gate;  /* MIDI gates */
-  reg [NUM_VOICES-1:0] voice_idle;  /* is this voice idle / ready to accept a new note? */
   reg [15:0] voice_frequency[0:NUM_VOICES-1];  /* frequency of the voice */
   reg [6:0] voice_note[0:NUM_VOICES-1];        /* midi note that is playing on this voice */
   wire signed[SAMPLE_BITS-1:0] voice_samples[0:NUM_VOICES-1];  // samples for each voice
 
   // MIXER: this adds the output from the 8 voices together
   always @(posedge SAMPLE_CLK) begin
-    raw_combined_voice_out <= (voice_samples[0]+voice_samples[1]+voice_samples[2]+voice_samples[3]
-                                +voice_samples[4]+voice_samples[5]+voice_samples[6]+voice_samples[7])>>>2;
+    raw_combined_voice_out <= (voice_samples[0]+voice_samples[1]+voice_samples[2]+voice_samples[3])>>>1;
+//                                +voice_samples[4]+voice_samples[5]+voice_samples[6]+voice_samples[7])>>>2;
+  end
+
+
+  // changeable voice parameters
+
+  reg [3:0] attack;
+  reg [3:0] decay;
+  reg [3:0] sustain;
+  reg [3:0] rel;
+
+  reg [1:0] midi_wave_select;
+  reg [7:0] pulse_width;
+
+  // assign audio output based on selected filter
+  // 0 = no filter, 1-4 = low-pass, 5-8 = high-pass, 9-12 = band-pass, 13-15 = notch-pass
+  reg [3:0] midi_filter_select;
+
+  reg [6:0] midi_filter_freq;
+  reg [6:0] midi_filter_q;
+
+  reg [3:0] voice_waveform_enable;
+
+
+  always @(*) begin
+    case (midi_wave_select)
+      2'b00: voice_waveform_enable <= 4'b0001;
+      2'b01: voice_waveform_enable <= 4'b0010;
+      2'b10: voice_waveform_enable <= 4'b0100;
+      2'b11: voice_waveform_enable <= 4'b1000;
+    endcase
   end
 
   reg signed [17:0] filter_f;
   reg signed [17:0] filter_q1;
 
+  f_table filter_f_lookup(.clk(SAMPLE_CLK), .val(midi_filter_freq), .result(filter_f));
+  q1_table filter_q1_lookup(.clk(SAMPLE_CLK), .val(midi_filter_q), .result(filter_q1));
+
+
   // state variable filter
   filter_svf #(.SAMPLE_BITS(SAMPLE_BITS))
     filter(
       .clk(SAMPLE_CLK),
-      .in(clamped_voice_out),
+      .in(clamped_voice_out>>>1),
       .out_highpass(out_hp),
       .out_lowpass(out_lp),
       .out_bandpass(out_bp),
@@ -100,37 +138,13 @@ module midi_player #(
       .Q1(filter_q1)
     );
 
-  // assign audio output based on selected filter
-  // 0 = no filter,
-  // 1-4 = low-pass
-  // 5-8 = high-pass
-  // 9-12 = band-pass
-  // 13-15 = notch-pass
-  reg [3:0] filter_select;
-  assign audio_data = (filter_select == 0) ? clamped_voice_out
-    : (filter_select <= 4) ? out_lp
-    : (filter_select <= 8) ? out_hp
-    : (filter_select <= 12) ? out_bp
+//  assign audio_data = clamped_voice_out;
+  assign audio_data =
+  (midi_filter_select == 0) ? clamped_voice_out
+    : (midi_filter_select < 5) ? out_lp
+    : (midi_filter_select < 9) ? out_hp
+    : (midi_filter_select < 13) ? out_bp
     : out_notch;
-
- localparam WAVE_NOISE=4;
- localparam WAVE_PULSE=3;
- localparam WAVE_SAW=2;
- localparam WAVE_TRIANGLE=1;
-
-  localparam WAVEFORM=WAVE_SAW;
-  localparam [7:0] SUSTAIN_VOLUME=128;
-
-  localparam ACCUMULATOR_BITS = 26;
-  localparam  ACCUMULATOR_SIZE = 2**ACCUMULATOR_BITS;
-  localparam  ACCUMULATOR_MAX  = ACCUMULATOR_SIZE-1;
-
-
-  `define CALCULATE_PHASE_INCREMENT(n) $rtoi(ACCUMULATOR_SIZE / ($itor(n) * SAMPLE_CLK_FREQ))
-
-  localparam ATTACK_INC =  `CALCULATE_PHASE_INCREMENT(0.038);
-  localparam DECAY_INC =  `CALCULATE_PHASE_INCREMENT(0.038);
-  localparam RELEASE_INC =  `CALCULATE_PHASE_INCREMENT(0.8);
 
 
   generate
@@ -141,19 +155,21 @@ module midi_player #(
       voice #(
         .OUTPUT_BITS(SAMPLE_BITS),
       ) voice (
-        .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(voice_frequency[i]), .rst(1'b0),
+        .main_clk(ONE_MHZ_CLK), .sample_clk(SAMPLE_CLK), .tone_freq(voice_frequency[i]), .rst(1'b0), .test(1'b0),
+        .waveform_enable(voice_waveform_enable),
         .en_ringmod(1'b0), .ringmod_source(1'b0),
         .en_sync(1'b0), .sync_source(1'b0),
-        .pulse_width(12'd600),
         .dout(voice_samples[i]),
-        .is_idle(voice_idle[i]),
-        .gate(voice_gate[i])
+        .gate(voice_gate[i]),
+        .attack(attack), .decay(decay), .sustain(sustain), .rel(rel),
+        .pulse_width({pulse_width, 4'b0000})
       );
     end
   endgenerate
 
   `include "midi_note_to_tone_freq.vh"
 
+  reg [1:0] next_voice;
 
   integer voice_idx;
   wire [15:0] tone_freq;
@@ -169,54 +185,11 @@ module midi_player #(
         // note on ; find an idle voice and assign this note to it (and gate it on)
         // the long chain below is because yosys doesn't support the "disable" statement.
         4'h9: begin
-                if (!(
-                    voice_note[0] == midi_parameter_1
-                    || voice_note[1] == midi_parameter_1
-                    || voice_note[2] == midi_parameter_1
-                    || voice_note[3] == midi_parameter_1
-                    || voice_note[4] == midi_parameter_1
-                    || voice_note[5] == midi_parameter_1
-                    || voice_note[6] == midi_parameter_1
-                    || voice_note[7] == midi_parameter_1
-                  )) begin
-                    if (voice_idle[0]) begin
-                      voice_note[0] <= midi_parameter_1;
-                      voice_frequency[0] <= tone_freq;
-                      voice_gate[0] <= 1'b1;
-                    end else if (voice_idle[1]) begin
-                      voice_note[1] <= midi_parameter_1;
-                      voice_frequency[1] <= tone_freq;
-                      voice_gate[1] <= 1'b1;
-                    end else if (voice_idle[2]) begin
-                      voice_note[2] <= midi_parameter_1;
-                      voice_frequency[2] <= tone_freq;
-                      voice_gate[2] <= 1'b1;
-                    end else if (voice_idle[2]) begin
-                      voice_note[2] <= midi_parameter_1;
-                      voice_frequency[2] <= tone_freq;
-                      voice_gate[2] <= 1'b1;
-                    end else if (voice_idle[3]) begin
-                      voice_note[3] <= midi_parameter_1;
-                      voice_frequency[3] <= tone_freq;
-                      voice_gate[3] <= 1'b1;
-                    end else if (voice_idle[4]) begin
-                      voice_note[4] <= midi_parameter_1;
-                      voice_frequency[4] <= tone_freq;
-                      voice_gate[4] <= 1'b1;
-                    end else if (voice_idle[5]) begin
-                      voice_note[5] <= midi_parameter_1;
-                      voice_frequency[5] <= tone_freq;
-                      voice_gate[5] <= 1'b1;
-                    end else if (voice_idle[6]) begin
-                      voice_note[6] <= midi_parameter_1;
-                      voice_frequency[6] <= tone_freq;
-                      voice_gate[6] <= 1'b1;
-                    end else if (voice_idle[7]) begin
-                      voice_note[7] <= midi_parameter_1;
-                      voice_frequency[7] <= tone_freq;
-                      voice_gate[7] <= 1'b1;
-                    end
-                  end
+                voice_note[next_voice] <= midi_parameter_1;
+                voice_frequency[next_voice] <= tone_freq;
+                voice_gate[next_voice] <= 1'b1;
+                voice_gate[next_voice+1] <= 1'b0; // get next voice ready for use by gating it off
+                next_voice <= next_voice + 1;
               end
         // note off ; find the voice playing this note, and gate it off.
         4'h8: begin
@@ -227,6 +200,20 @@ module midi_player #(
                   end
                 end
               end
+        // controller update; update voice parameters appropriately
+        4'hb: begin
+              case (midi_parameter_1)
+                7'h01:  midi_filter_freq <= midi_parameter_2[6:0]; /* modulation wheel 1 */
+                7'h02:  midi_filter_q <= midi_parameter_2[6:0];    /* modulation wheel 2 */
+                7'h0e:  attack <= midi_parameter_2[6:3];
+                7'h0f:  decay <= midi_parameter_2[6:3];
+                7'h10:  sustain <= midi_parameter_2[6:3];
+                7'h11:  rel <= midi_parameter_2[6:3];
+                7'h12:  midi_wave_select <= midi_parameter_2[6:5];
+                7'h13:  pulse_width <= {midi_parameter_2[6:0],1'b0};
+                7'h14:  midi_filter_select <= midi_parameter_2[6:3];
+              endcase
+            end
       endcase
     end else begin
       // no event to acknowledge, so clear ack flag

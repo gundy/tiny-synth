@@ -2,9 +2,9 @@
 
 A simple MIDI-based example for tiny-synth.
 
-This example is an eight-voice MIDI-connected synthesizer.
+This example is a four-voice MIDI-connected synthesizer.
 
-This example also includes support for controlling MIDI parameters using
+This example includes support for controlling MIDI parameters using
 the general-purpose controllers that some MIDI keyboards have.
 
 My keyboard is made by Roland, and has controller knobs which send messages of the format:
