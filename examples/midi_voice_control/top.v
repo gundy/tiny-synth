@@ -14,9 +14,10 @@ module top (
     input CLK,    // 16MHz clock
 `endif
     output USBPU,  // USB pull-up resistor
-    input PIN_14,  // serial (MIDI) data in
-    output PIN_15, // serial (MIDI) data out
-    output PIN_1);  /* audio out */
+    input PIN_22,  // serial (MIDI) data in
+    output PIN_24, // serial (MIDI) data out
+    output PIN_1,   /* audio out left */
+    output PIN_2);  /* audio out right */
 
 `ifdef blackice
     wire CLK;
@@ -31,19 +32,24 @@ module top (
         .PIN_TYPE(6'b0000_01),
         .PULLUP(1'b0)
     ) serial_rx_pin_conf (
-      .PACKAGE_PIN(PIN_14),
+      .PACKAGE_PIN(PIN_22),
       .D_IN_0(serial_rx)
     );
 
     localparam SAMPLE_BITS = 12;
 
     wire signed [SAMPLE_BITS-1:0] final_mix;
-    midi_player #(.SAMPLE_BITS(SAMPLE_BITS)) midi_player(.clk(CLK), .serial_rx(serial_rx), .serial_tx(PIN_15), .audio_data(final_mix));
+    midi_player #(.SAMPLE_BITS(SAMPLE_BITS)) midi_player(.clk(CLK), .serial_rx(serial_rx), .serial_tx(PIN_24), .audio_data(final_mix));
 
-    pdm_dac #(.DATA_BITS(SAMPLE_BITS)) dac1(
+    pdm_dac #(.DATA_BITS(SAMPLE_BITS)) dac_left(
       .din(final_mix),
       .clk(CLK),  // DAC runs at full 16MHz speed.
       .dout(PIN_1)
+    );
+    pdm_dac #(.DATA_BITS(SAMPLE_BITS)) dac_right(
+      .din(final_mix),
+      .clk(CLK),  // DAC runs at full 16MHz speed.
+      .dout(PIN_2)
     );
 
 endmodule

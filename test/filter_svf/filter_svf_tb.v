@@ -18,7 +18,7 @@ wire signed [11:0] sq_wave_sig;
 
 clock_divider #(.DIVISOR(128)) cdiv_sq(.cin(clkin), .cout(sq_wave_clk));
 
-assign sq_wave_sig = sq_wave_clk ? -12'd400 : 12'd400;
+assign sq_wave_sig = sq_wave_clk ? -12'd2048 : 12'd2047;
 
 wire signed [11:0] high_pass_out;
 wire signed [11:0] low_pass_out;

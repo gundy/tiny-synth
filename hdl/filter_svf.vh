@@ -30,7 +30,7 @@ module filter_svf #(
   output signed [SAMPLE_BITS-1:0] out_lowpass,
   output signed [SAMPLE_BITS-1:0] out_bandpass,
   output signed [SAMPLE_BITS-1:0] out_notch,
-  input  signed [17:0] F,  /* F1: frequency control; fixed point 1.17  ; F = 2π*Fc/Fs.  At a sample rate of 250kHz, F ranges from 0.00050 (10Hz) -> ~0.55 (22kHz) */
+  input  signed [17:0] F,  /* F1: frequency control; fixed point 1.17  ; F = 2sin(π*Fc/Fs).  At a sample rate of 250kHz, F ranges from 0.00050 (10Hz) -> ~0.55 (22kHz) */
   input  signed [17:0] Q1  /* Q1: Q control;         fixed point 2.16  ; Q1 = 1/Q        Q1 ranges from 2 (Q=0.5) to 0 (Q = infinity). */
 );
 
@@ -41,8 +41,8 @@ module filter_svf #(
   reg signed[SAMPLE_BITS+2:0] notch;
   reg signed[SAMPLE_BITS+2:0] in_sign_extended;
 
-  localparam signed [SAMPLE_BITS:0] MAX = (2**(SAMPLE_BITS-1))-1;
-  localparam signed [SAMPLE_BITS:0] MIN = -(2**(SAMPLE_BITS-1));
+  localparam signed [SAMPLE_BITS+2:0] MAX = (2**(SAMPLE_BITS-1))-1;
+  localparam signed [SAMPLE_BITS+2:0] MIN = -(2**(SAMPLE_BITS-1));
 
   `define CLAMP(x) ((x>MAX)?MAX:((x<MIN)?MIN:x[SAMPLE_BITS-1:0]))
 
@@ -66,11 +66,11 @@ module filter_svf #(
   end
 
   always @(posedge clk) begin
-    in_sign_extended = { {3{in[SAMPLE_BITS-1]}}, in};
+    in_sign_extended = { in[SAMPLE_BITS-1], in[SAMPLE_BITS-1], in[SAMPLE_BITS-1], in};  /* sign-extend the input value to a wider precision */
     Q1_scaled_delayed_bandpass = (bandpass * Q1) >>> 16;
     F_scaled_delayed_bandpass = (bandpass * F) >>> 17;
     lowpass = lowpass + F_scaled_delayed_bandpass[SAMPLE_BITS+2:0];
-    highpass = in_sign_extended - Q1_scaled_delayed_bandpass[SAMPLE_BITS+2:0] - lowpass;
+    highpass = in_sign_extended - lowpass - Q1_scaled_delayed_bandpass[SAMPLE_BITS+2:0];
     F_scaled_highpass = (highpass * F) >>> 17;
     bandpass = F_scaled_highpass[SAMPLE_BITS+2:0] + bandpass;
     notch = highpass + lowpass;

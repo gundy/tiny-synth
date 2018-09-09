@@ -7,7 +7,7 @@ module f_table(
   output reg signed [17:0] result);
 
   reg[17:0] LOOKUP_TABLE[0:127];
-  initial $readmemh ("f_table.mem", LOOKUP_TABLE);
+  initial $readmemh ("f_table_44100Hz.mem", LOOKUP_TABLE);
 
   always @(posedge clk) begin
     result <= LOOKUP_TABLE[val];

@@ -39,7 +39,7 @@
 
 # Left side of board
 set_io --warn-no-port PIN_1 A2
-#set_io --warn-no-port PIN_2 A1
+set_io --warn-no-port PIN_2 A1
 #set_io --warn-no-port PIN_3 B1
 #set_io --warn-no-port PIN_4 C2
 #set_io --warn-no-port PIN_5 C1
@@ -53,17 +53,17 @@ set_io --warn-no-port PIN_1 A2
 #set_io --warn-no-port PIN_13 H2
 
 # Right side of board
-set_io --warn-no-port PIN_14 H9
-set_io --warn-no-port PIN_15 D9
+#set_io --warn-no-port PIN_14 H9
+#set_io --warn-no-port PIN_15 D9
 #set_io --warn-no-port PIN_16 D8
 #set_io --warn-no-port PIN_17 C9
 #set_io --warn-no-port PIN_18 A9
 #set_io --warn-no-port PIN_19 B8
 #set_io --warn-no-port PIN_20 A8
 #set_io --warn-no-port PIN_21 B7
-#set_io --warn-no-port PIN_22 A7
+set_io --warn-no-port PIN_22 A7
 #set_io --warn-no-port PIN_23 B6
-#set_io --warn-no-port PIN_24 A6
+set_io --warn-no-port PIN_24 A6
 
 # SPI flash interface on bottom of board
 #set_io --warn-no-port SPI_SS F7

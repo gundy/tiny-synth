@@ -44,10 +44,9 @@ module midi_player #(
   wire ONE_MHZ_CLK;
   clock_divider #(.DIVISOR(16)) mhz_clk_divider(.cin(clk), .cout(ONE_MHZ_CLK));
 
-  localparam SAMPLE_CLK_FREQ = 250000;
+  localparam SAMPLE_CLK_FREQ = 44100;
 
-  // divide main clock down to 44100Hz for sample output (note this clock will have
-  // a bit of jitter because 44.1kHz doesn't go evenly into 16MHz).
+  // divide main clock down to 44100Hz for sample output
   wire SAMPLE_CLK;
   clock_divider #(
     .DIVISOR((16000000/SAMPLE_CLK_FREQ))
@@ -84,7 +83,7 @@ module midi_player #(
 
   // MIXER: this adds the output from the 8 voices together
   always @(posedge SAMPLE_CLK) begin
-    raw_combined_voice_out <= (voice_samples[0]+voice_samples[1]+voice_samples[2]+voice_samples[3])>>>1;
+    raw_combined_voice_out <= (voice_samples[0]+voice_samples[1]+voice_samples[2]+voice_samples[3])>>>2;
 //                                +voice_samples[4]+voice_samples[5]+voice_samples[6]+voice_samples[7])>>>2;
   end
 
@@ -106,8 +105,19 @@ module midi_player #(
   reg [6:0] midi_filter_freq;
   reg [6:0] midi_filter_q;
 
-  reg [3:0] voice_waveform_enable;
+  initial begin
+    attack <= 4'h5;
+    decay <= 4'h6;
+    sustain <= 4'hc;
+    rel <= 4'hb;
+    midi_wave_select <= 2'b10;
+    pulse_width <= 8'h60;
+    midi_filter_select <= 4'h0;
+    midi_filter_freq <= 7'h0;
+    midi_filter_q <= 7'h0;
+  end
 
+  reg [3:0] voice_waveform_enable;
 
   always @(*) begin
     case (midi_wave_select)
@@ -129,7 +139,7 @@ module midi_player #(
   filter_svf #(.SAMPLE_BITS(SAMPLE_BITS))
     filter(
       .clk(SAMPLE_CLK),
-      .in(clamped_voice_out>>>1),
+      .in(clamped_voice_out),
       .out_highpass(out_hp),
       .out_lowpass(out_lp),
       .out_bandpass(out_bp),
@@ -162,7 +172,7 @@ module midi_player #(
         .dout(voice_samples[i]),
         .gate(voice_gate[i]),
         .attack(attack), .decay(decay), .sustain(sustain), .rel(rel),
-        .pulse_width({pulse_width, 4'b0000})
+        .pulse_width({pulse_width, 4'b1000})
       );
     end
   endgenerate

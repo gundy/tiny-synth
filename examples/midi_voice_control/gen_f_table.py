@@ -5,13 +5,13 @@
 import math
 
 # sample rate
-Fs = 250000
+Fs = 44100
 
 # min F
 Fmin = 30
 
 # max F
-Fmax = 16000
+Fmax = 6000
 
 # number of entries in table
 Ts = 128.0
@@ -19,7 +19,7 @@ Ts = 128.0
 
 
 def svf_f(fs, fc):
-    return 2*3.14159265359*(fc/fs)
+    return 2*math.sin(3.14159265359*(fc/fs))
 
 
 Frange = Fmax/Fmin;
