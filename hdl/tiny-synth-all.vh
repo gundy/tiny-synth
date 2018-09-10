@@ -21,5 +21,6 @@
 `include "flanger.vh"
 `include "filter_ewma.vh"
 `include "filter_svf.vh"
+`include "filter_svf_pipelined.vh"
 
 `endif

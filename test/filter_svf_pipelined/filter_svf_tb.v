@@ -10,13 +10,15 @@ module filter_svf_tb();
 parameter DURATION = 1000;  // 1000 = 0.1 milliseconds
 
 //-- Clock signal. Running at 1MHz
-reg clkin = 0;
+reg clkin = 1'b1;
 always #0.5 clkin = ~clkin;
 
+wire clkin8;
 wire sq_wave_clk;
 wire signed [11:0] sq_wave_sig;
 
-clock_divider #(.DIVISOR(128)) cdiv_sq(.cin(clkin), .cout(sq_wave_clk));
+clock_divider #(.DIVISOR(1024)) cdiv_sq(.cin(clkin), .cout(sq_wave_clk));
+clock_divider #(.DIVISOR(16)) cdiv_c8(.cin(clkin), .cout(clkin8));
 
 assign sq_wave_sig = sq_wave_clk ? -12'd2048 : 12'd2047;
 
@@ -32,7 +34,8 @@ localparam Q1_fixed_point = $rtoi(Q1 * (2**16));
 localparam F = 0.4;
 localparam F_fixed_point = $rtoi(F * (2**17));
 
-filter_svf state_variable_filter(
+filter_svf_pipelined state_variable_filter(
+  .sample_clk(clkin8),
   .clk(clkin),
   .F(F_fixed_point),
   .Q1(Q1_fixed_point),
