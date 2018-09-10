@@ -136,17 +136,32 @@ module midi_player #(
 
 
   // state variable filter
-  filter_svf #(.SAMPLE_BITS(SAMPLE_BITS))
-    filter(
-      .clk(SAMPLE_CLK),
-      .in(clamped_voice_out),
-      .out_highpass(out_hp),
-      .out_lowpass(out_lp),
-      .out_bandpass(out_bp),
-      .out_notch(out_notch),
-      .F(filter_f),
-      .Q1(filter_q1)
-    );
+  // filter_svf #(.SAMPLE_BITS(SAMPLE_BITS))
+  //   filter(
+  //     .clk(SAMPLE_CLK),  /* needs to be at least 4x SAMPLE_CLK */
+  //     .in(clamped_voice_out),
+  //     .out_highpass(out_hp),
+  //     .out_lowpass(out_lp),
+  //     .out_bandpass(out_bp),
+  //     .out_notch(out_notch),
+  //     .F(filter_f),
+  //     .Q1(filter_q1)
+  //   );
+
+    // state variable filter
+    filter_svf_pipelined #(.SAMPLE_BITS(SAMPLE_BITS))
+      filter(
+        .clk(ONE_MHZ_CLK),  /* needs to be at least 4x SAMPLE_CLK */
+        .sample_clk(SAMPLE_CLK),
+        .in(clamped_voice_out),
+        .out_highpass(out_hp),
+        .out_lowpass(out_lp),
+        .out_bandpass(out_bp),
+        .out_notch(out_notch),
+        .F(filter_f),
+        .Q1(filter_q1)
+      );
+
 
 //  assign audio_data = clamped_voice_out;
   assign audio_data =
