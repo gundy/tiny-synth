@@ -19,7 +19,7 @@ The demo project instantiates a module called a "`voice`"; The concept of a `voi
 The below circuit works well enough for me, but YMMV.
 
 ```      
-       e.g. 330 ohm      eg. 10uF
+       e.g. 470 ohm      eg. 10uF
   DOUT   ---./\/\/\.---o------| |-------> "Analog" output
                        |
                       ---
@@ -29,6 +29,8 @@ The below circuit works well enough for me, but YMMV.
                       --- GND
                        -                 
 ```
+
+_Note: the resistor value above was originally specified as 330ohm, but it seems like this may have been putting the 8mA rated IO's on the FPGA at risk. Especially if you happened to accidentally short-circuit the output. The new recommendation is 470ohm._
 
 The module has been synthesized and bench-tested on a TinyFPGA BX board using the [IceStorm](http://www.clifford.at/icestorm/) toolchain.
 
