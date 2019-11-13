@@ -44,7 +44,7 @@
  	input  [7:0]  reg_dat_di,
  	output        tx_busy);
 
- localparam cfg_divider = $rtoi(CLOCK_FREQUENCY / BAUD_RATE);
+ localparam cfg_divider = $rtoi((CLOCK_FREQUENCY / BAUD_RATE)-1.0);
 
  /*
   * RECEIVE related registers
@@ -127,7 +127,7 @@
             // we had a false start bit; reset and try again
             recv_state <= 0;
           end else begin
-   					if (2*recv_divcnt > cfg_divider) begin
+   					if (2*recv_divcnt >= cfg_divider) begin
               /* at this point we've aligned ourselves half-way
                * through the start-bit (notice the 2x multiplier above),
                * so we reset the counter to zero, and wait for the next
@@ -139,7 +139,7 @@
           end
  				end
  				10: begin
- 					if (recv_divcnt > cfg_divider) begin
+ 					if (recv_divcnt >= cfg_divider) begin
             /* at this point we're in the middle of receiving the
              * stop bit, and rather than doing anything with it, we
              * use this as an opportunity to clock out the newly
@@ -155,7 +155,7 @@
  				end
  				default: begin
           /* states 2-9; clocking in bits 0-7. */
- 					if (recv_divcnt > cfg_divider) begin
+ 					if (recv_divcnt >= cfg_divider) begin
  						recv_pattern <= {ser_rx, recv_pattern[7:1]};
  						recv_state <= recv_state + 1;
  						recv_divcnt <= 0;
@@ -200,7 +200,7 @@
  				send_bitcnt <= 10;
  				send_divcnt <= 0;
  			end else
- 			if (send_divcnt > cfg_divider && send_bitcnt) begin
+ 			if (send_divcnt >= cfg_divider && send_bitcnt) begin
         /*
          * we're ready for the next bit, so rotate send_pattern one
          * bit to the right (and fill MSB with a 1).  Also
